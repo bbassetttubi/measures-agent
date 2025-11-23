@@ -1,0 +1,245 @@
+{
+  "Hemoglobin A1c (HbA1c)": {
+    "optimal_min": 4.0,
+    "optimal_max": 5.6,
+    "normal_max": 6.4,
+    "high_min": 6.5,
+    "unit": "%",
+    "source": "ADA 2024 Standards"
+  },
+  "Fasting Glucose": {
+    "optimal_min": 70,
+    "optimal_max": 85,
+    "normal_max": 99,
+    "high_min": 100,
+    "unit": "mg/dL",
+    "source": "ADA Guidelines"
+  },
+  "Fasting Insulin": {
+    "optimal_min": 2.0,
+    "optimal_max": 5.0,
+    "normal_max": 25.0,
+    "unit": "uIU/mL",
+    "source": "Clinical Standards"
+  },
+  "ALT (Alanine Aminotransferase)": {
+    "optimal_min": 7,
+    "optimal_max": 25,
+    "normal_max": 40,
+    "unit": "U/L",
+    "source": "AASLD Guidelines"
+  },
+  "Lipase": {
+    "optimal_min": 0,
+    "optimal_max": 60,
+    "normal_max": 78,
+    "unit": "U/L",
+    "source": "Clinical Lab Standards"
+  },
+  "Apolipoprotein B (ApoB)": {
+    "optimal_min": 40,
+    "optimal_max": 90,
+    "normal_max": 100,
+    "high_min": 100,
+    "unit": "mg/dL",
+    "source": "ESC/EAS 2019"
+  },
+  "LDL (Low-Density Lipoprotein)": {
+    "optimal_min": 0,
+    "optimal_max": 100,
+    "normal_max": 129,
+    "high_min": 130,
+    "unit": "mg/dL",
+    "source": "ACC/AHA 2019"
+  },
+  "HDL (High-Density Lipoprotein)": {
+    "optimal_min": 60,
+    "optimal_max": 100,
+    "low_max": 40,
+    "normal_min": 40,
+    "unit": "mg/dL",
+    "source": "NCEP ATP III"
+  },
+  "Triglycerides": {
+    "optimal_min": 0,
+    "optimal_max": 100,
+    "normal_max": 149,
+    "high_min": 150,
+    "unit": "mg/dL",
+    "source": "NCEP ATP III"
+  },
+  "Total Cholesterol": {
+    "optimal_min": 100,
+    "optimal_max": 200,
+    "normal_max": 239,
+    "high_min": 240,
+    "unit": "mg/dL",
+    "source": "NCEP ATP III"
+  },
+  "Total Cholesterol / HDL Ratio": {
+    "optimal_min": 0,
+    "optimal_max": 3.5,
+    "normal_max": 5.0,
+    "high_min": 5.0,
+    "unit": "ratio",
+    "source": "Framingham Study"
+  },
+  "Vitamin D": {
+    "optimal_min": 40,
+    "optimal_max": 80,
+    "normal_min": 30,
+    "low_max": 30,
+    "unit": "ng/mL",
+    "source": "Endocrine Society 2024"
+  },
+  "Vitamin B9 (Folate)": {
+    "optimal_min": 10.0,
+    "optimal_max": 24.0,
+    "low_max": 3.0,
+    "unit": "ng/mL",
+    "source": "NIH Reference"
+  },
+  "Vitamin B12": {
+    "optimal_min": 500,
+    "optimal_max": 1000,
+    "normal_min": 200,
+    "low_max": 200,
+    "unit": "pg/mL",
+    "source": "NIH Reference"
+  },
+  "Testosterone, Total": {
+    "optimal_min": 550,
+    "optimal_max": 900,
+    "normal_min": 264,
+    "low_max": 300,
+    "unit": "ng/dL",
+    "source": "Endocrine Society"
+  },
+  "Ferritin": {
+    "optimal_min": 50,
+    "optimal_max": 150,
+    "normal_min": 30,
+    "normal_max": 400,
+    "unit": "ng/mL",
+    "source": "WHO Guidelines"
+  },
+  "Homocysteine": {
+    "optimal_min": 5,
+    "optimal_max": 10,
+    "normal_max": 15,
+    "high_min": 15,
+    "unit": "µmol/L",
+    "source": "AHA Guidelines"
+  },
+  "Uric Acid": {
+    "optimal_min": 3.0,
+    "optimal_max": 6.0,
+    "normal_max": 7.0,
+    "high_min": 7.0,
+    "unit": "mg/dL",
+    "source": "ACR Guidelines"
+  },
+  "C-Reactive Protein (hs-CRP)": {
+    "optimal_min": 0,
+    "optimal_max": 1.0,
+    "normal_max": 3.0,
+    "high_min": 3.0,
+    "unit": "mg/L",
+    "source": "AHA/CDC 2003"
+  },
+  "TSH (Thyroid Stimulating Hormone)": {
+    "optimal_min": 1.0,
+    "optimal_max": 2.5,
+    "normal_min": 0.4,
+    "normal_max": 4.0,
+    "unit": "mIU/L",
+    "source": "AACE Guidelines"
+  },
+  "Free T3": {
+    "optimal_min": 3.0,
+    "optimal_max": 4.0,
+    "normal_min": 2.3,
+    "normal_max": 4.2,
+    "unit": "pg/mL",
+    "source": "Clinical Standards"
+  },
+  "Free T4": {
+    "optimal_min": 1.0,
+    "optimal_max": 1.5,
+    "normal_min": 0.8,
+    "normal_max": 1.8,
+    "unit": "ng/dL",
+    "source": "Clinical Standards"
+  },
+  "Cortisol (Morning)": {
+    "optimal_min": 10,
+    "optimal_max": 20,
+    "normal_min": 6,
+    "normal_max": 23,
+    "unit": "µg/dL",
+    "source": "Endocrine Society"
+  },
+  "DHEA-S": {
+    "optimal_min": 200,
+    "optimal_max": 400,
+    "normal_min": 80,
+    "normal_max": 560,
+    "unit": "µg/dL",
+    "source": "Clinical Standards"
+  },
+  "Magnesium": {
+    "optimal_min": 2.0,
+    "optimal_max": 2.6,
+    "normal_min": 1.7,
+    "normal_max": 2.2,
+    "unit": "mg/dL",
+    "source": "NIH Reference"
+  },
+  "Calcium": {
+    "optimal_min": 9.0,
+    "optimal_max": 10.0,
+    "normal_min": 8.5,
+    "normal_max": 10.5,
+    "unit": "mg/dL",
+    "source": "Clinical Standards"
+  },
+  "Creatinine": {
+    "optimal_min": 0.7,
+    "optimal_max": 1.2,
+    "normal_min": 0.6,
+    "normal_max": 1.3,
+    "unit": "mg/dL",
+    "source": "KDIGO Guidelines"
+  },
+  "eGFR": {
+    "optimal_min": 90,
+    "optimal_max": 120,
+    "normal_min": 60,
+    "unit": "mL/min/1.73m²",
+    "source": "KDIGO 2024"
+  },
+  "Hemoglobin": {
+    "optimal_min": 14.0,
+    "optimal_max": 17.0,
+    "normal_min": 13.5,
+    "normal_max": 17.5,
+    "unit": "g/dL",
+    "source": "WHO Standards"
+  },
+  "White Blood Cell Count": {
+    "optimal_min": 4.5,
+    "optimal_max": 10.0,
+    "normal_min": 4.0,
+    "normal_max": 11.0,
+    "unit": "10^9/L",
+    "source": "Clinical Standards"
+  },
+  "Platelet Count": {
+    "optimal_min": 150,
+    "optimal_max": 400,
+    "normal_min": 150,
+    "normal_max": 450,
+    "unit": "10^9/L",
+    "source": "Clinical Standards"
+  }
+}

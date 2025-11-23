@@ -1,0 +1,597 @@
+[
+  {
+    "name": "Hemoglobin A1c (HbA1c)",
+    "value": "5.1",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Fasting Glucose",
+    "value": "87",
+    "units": "mg/dL",
+    "status": "\u2705 Normal",
+    "category": "General"
+  },
+  {
+    "name": "Fasting Insulin",
+    "value": "7.2",
+    "units": "uIU/mL",
+    "status": "\u2705 Normal",
+    "category": "General"
+  },
+  {
+    "name": "ALT (Alanine Aminotransferase)",
+    "value": "24",
+    "units": "U/L",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Fructosamine",
+    "value": "246",
+    "units": "\u00b5mol/L",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Thiamine (Vitamin B1)",
+    "value": "94",
+    "units": "nmol/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "C-Peptide",
+    "value": "1.81",
+    "units": "ng/mL",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Amylase",
+    "value": "52",
+    "units": "U/L",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Lipase",
+    "value": "79",
+    "units": "U/L",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Apolipoprotein B (ApoB)",
+    "value": "132",
+    "units": "mg/dL",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "LDL (Low-Density Lipoprotein)",
+    "value": "167",
+    "units": "mg/dL (calc)",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "HDL (High-Density Lipoprotein)",
+    "value": "48",
+    "units": "mg/dL",
+    "status": "\u2705 Normal",
+    "category": "General"
+  },
+  {
+    "name": "Triglycerides",
+    "value": "171",
+    "units": "mg/dL",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Non-HDL Cholesterol",
+    "value": "199",
+    "units": "mg/dL (calc)",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Total Cholesterol / HDL Ratio",
+    "value": "5.1",
+    "units": "(calc)",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Total Cholesterol",
+    "value": "247",
+    "units": "mg/dL",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Uric Acid",
+    "value": "5.7",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Homocysteine",
+    "value": "12.6",
+    "units": "\u00b5mol/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "High-Sensitivity C-Reactive Protein (hsCRP)",
+    "value": "<0.2",
+    "units": "mg/L",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "White Blood Cell Count (WBC)",
+    "value": "4.1",
+    "units": "Thousand/uL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Platelet Count",
+    "value": "156",
+    "units": "Thousand/uL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Neutrophils",
+    "value": "50.9",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Absolute Neutrophils",
+    "value": "2087",
+    "units": "cells/uL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Basophils",
+    "value": "0.5",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Absolute Basophils",
+    "value": "21",
+    "units": "cells/uL",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Eosinophils",
+    "value": "1.2",
+    "units": "%",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Absolute Eosinophils",
+    "value": "49",
+    "units": "cells/uL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Lymphocytes",
+    "value": "41.5",
+    "units": "%",
+    "status": "\u26a0\ufe0f High",
+    "category": "General"
+  },
+  {
+    "name": "Absolute Lymphocytes",
+    "value": "1702",
+    "units": "cells/uL",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Monocytes",
+    "value": "5.9",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "General"
+  },
+  {
+    "name": "Absolute Monocytes",
+    "value": "242",
+    "units": "cells/uL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Alkaline Phosphatase (ALP)",
+    "value": "50",
+    "units": "U/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "General"
+  },
+  {
+    "name": "Iron",
+    "value": "65",
+    "units": "mcg/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Ferritin",
+    "value": "205",
+    "units": "ng/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Total Iron Binding Capacity (TIBC)",
+    "value": "316",
+    "units": "mcg/dL (calc)",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Red Blood Cell Count (RBC)",
+    "value": "5.15",
+    "units": "Million/uL",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Red Cell Distribution Width (RDW)",
+    "value": "12.9",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Hemoglobin",
+    "value": "15.7",
+    "units": "g/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Hematocrit",
+    "value": "46.1",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Mean Corpuscular Hemoglobin (MCH)",
+    "value": "30.5",
+    "units": "pg",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Mean Corpuscular Hemoglobin Concentration (MCHC)",
+    "value": "34.1",
+    "units": "g/dL",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Mean Corpuscular Volume (MCV)",
+    "value": "89.5",
+    "units": "fL",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Mean Platelet Volume (MPV)",
+    "value": "11.5",
+    "units": "fL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Reticulocyte Count, Automated",
+    "value": "1.2",
+    "units": "%",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Reticulocyte Count (absolute)",
+    "value": "61,800",
+    "units": "cells/uL",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Transferrin Saturation (TS)",
+    "value": "21",
+    "units": "% (calc)",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Bilirubin",
+    "value": "0.5",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Endurance"
+  },
+  {
+    "name": "Albumin",
+    "value": "4.9",
+    "units": "g/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Urea Nitrogen (BUN)",
+    "value": "15",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Creatinine",
+    "value": "1.28",
+    "units": "mg/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Recovery"
+  },
+  {
+    "name": "BUN / Creatinine Ratio",
+    "value": "\u2014",
+    "units": "\u2014",
+    "status": "\ud83d\udd53 Processing",
+    "category": "Recovery"
+  },
+  {
+    "name": "Creatine Kinase (CK)",
+    "value": "195",
+    "units": "U/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Carbon Dioxide (CO\u2082)",
+    "value": "29",
+    "units": "mmol/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Lactate Dehydrogenase (LD)",
+    "value": "119",
+    "units": "U/L",
+    "status": "\ud83d\udd3d Low",
+    "category": "Recovery"
+  },
+  {
+    "name": "Gamma-Glutamyl Transpeptidase (GGT)",
+    "value": "13",
+    "units": "U/L",
+    "status": "\u2705 Optimal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Estimated Glomerular Filtration Rate (eGFR)",
+    "value": "73",
+    "units": "mL/min/1.73m\u00b2",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Aspartate Aminotransferase (AST)",
+    "value": "22",
+    "units": "U/L",
+    "status": "\u2705 Optimal",
+    "category": "Recovery"
+  },
+  {
+    "name": "Testosterone, Total",
+    "value": "560",
+    "units": "ng/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Fitness"
+  },
+  {
+    "name": "Testosterone, Free",
+    "value": "81.0",
+    "units": "pg/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Fitness"
+  },
+  {
+    "name": "Testosterone, Bioavailable",
+    "value": "180.6",
+    "units": "ng/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Fitness"
+  },
+  {
+    "name": "Sex Hormone Binding Globulin (SHBG)",
+    "value": "30",
+    "units": "nmol/L",
+    "status": "\u2705 Optimal",
+    "category": "Fitness"
+  },
+  {
+    "name": "Cortisol",
+    "value": "13.2",
+    "units": "mcg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Estradiol (E2)",
+    "value": "33",
+    "units": "pg/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Dehydroepiandrosterone Sulfate (DHEAS)",
+    "value": "191",
+    "units": "mcg/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Thyroid-Stimulating Hormone (TSH)",
+    "value": "2.29",
+    "units": "mIU/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Follicle-Stimulating Hormone (FSH)",
+    "value": "2.3",
+    "units": "mIU/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Luteinizing Hormone (LH)",
+    "value": "2.8",
+    "units": "mIU/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Prolactin",
+    "value": "9.0",
+    "units": "ng/mL",
+    "status": "\u2705 Optimal",
+    "category": "Hormone Balance"
+  },
+  {
+    "name": "Magnesium",
+    "value": "2.4",
+    "units": "mg/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Sleep"
+  },
+  {
+    "name": "Vitamin D",
+    "value": "26",
+    "units": "ng/mL",
+    "status": "\ud83d\udd3b Low",
+    "category": "Sleep"
+  },
+  {
+    "name": "Red Blood Cell (RBC) Magnesium",
+    "value": "5.1",
+    "units": "mg/dL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Sleep"
+  },
+  {
+    "name": "Vitamin B12",
+    "value": "469",
+    "units": "pg/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Sleep"
+  },
+  {
+    "name": "Vitamin B9 (Folate)",
+    "value": "21.0",
+    "units": "ng/mL",
+    "status": "\ud83d\udd3b Low",
+    "category": "Sleep"
+  },
+  {
+    "name": "Vitamin B12",
+    "value": "469",
+    "units": "pg/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Cognition"
+  },
+  {
+    "name": "Vitamin B9 (Folate)",
+    "value": "21.0",
+    "units": "ng/mL",
+    "status": "\ud83d\udd3a High",
+    "category": "Cognition"
+  },
+  {
+    "name": "Vitamin B6 (Pyridoxine)",
+    "value": "16.7",
+    "units": "ng/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Cognition"
+  },
+  {
+    "name": "Phosphorus",
+    "value": "3.9",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Cognition"
+  },
+  {
+    "name": "Calcium",
+    "value": "9.7",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Cognition"
+  },
+  {
+    "name": "Zinc",
+    "value": "\u2014",
+    "units": "\u2014",
+    "status": "\ud83d\udd53 Processing",
+    "category": "Cognition"
+  },
+  {
+    "name": "Vitamin B6 (Pyridoxine)",
+    "value": "16.7",
+    "units": "ng/mL",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  },
+  {
+    "name": "Phosphorus",
+    "value": "3.9",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  },
+  {
+    "name": "Calcium",
+    "value": "9.7",
+    "units": "mg/dL",
+    "status": "\u2705 Optimal",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  },
+  {
+    "name": "Zinc",
+    "value": "\u2014",
+    "units": "\u2014",
+    "status": "\ud83d\udd53 Processing",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  },
+  {
+    "name": "Iodine",
+    "value": "52",
+    "units": "mcg/L",
+    "status": "\u2699\ufe0f Normal",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  },
+  {
+    "name": "Chloride",
+    "value": "104",
+    "units": "mmol/L",
+    "status": "\u2705 Optimal",
+    "category": "Vitamin / Mineral Balance & Hydration"
+  }
+]

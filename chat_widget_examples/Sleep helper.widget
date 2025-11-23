@@ -1,0 +1,556 @@
+{
+  "version": "1.0",
+  "name": "Sleep helper",
+  "template": "{\"type\":\"Card\",\"size\":\"md\",\"children\":[{\"type\":\"Col\",\"gap\":3,\"children\":[{\"type\":\"Row\",\"align\":\"center\",\"gap\":2,\"children\":[{\"type\":\"Box\",\"background\":\"blue-500\",\"radius\":\"full\",\"padding\":1.5,\"children\":[{\"type\":\"Icon\",\"name\":\"sparkle\",\"color\":\"white\",\"size\":\"lg\"}]},{\"type\":\"Title\",\"value\":{{ (title) | tojson }},\"size\":\"md\"},{\"type\":\"Spacer\"},{\"type\":\"Badge\",\"label\":\"Sleep\",\"variant\":\"soft\",\"color\":\"info\"}]},{\"type\":\"Col\",\"gap\":2,\"children\":[{%- set _c -%},{\"type\":\"Caption\",\"value\":\"Quick tips\",\"color\":\"secondary\"}{%-for item in tips -%},{\"type\":\"Row\",\"key\":{{ (item.id) | tojson }},\"gap\":2,\"children\":[{\"type\":\"Icon\",\"name\":\"check-circle\",\"color\":\"success\",\"size\":\"sm\"},{\"type\":\"Text\",\"value\":{{ (item.text) | tojson }},\"size\":\"sm\"}]}{%-endfor-%}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]},{\"type\":\"Divider\"},{\"type\":\"Col\",\"gap\":2,\"children\":[{%- set _c -%},{\"type\":\"Caption\",\"value\":\"Videos\",\"color\":\"secondary\"}{%-for item in videos -%},{\"type\":\"Row\",\"key\":{{ (item.id) | tojson }},\"gap\":2,\"align\":\"center\",\"children\":[{\"type\":\"Icon\",\"name\":\"play\",\"size\":\"sm\"},{\"type\":\"Col\",\"children\":[{\"type\":\"Text\",\"value\":{{ (item.title) | tojson }},\"size\":\"sm\",\"weight\":\"semibold\",\"maxLines\":2},{\"type\":\"Caption\",\"value\":{{ (item.source) | tojson }},\"size\":\"sm\",\"color\":\"tertiary\"}]},{\"type\":\"Spacer\"},{\"type\":\"Button\",\"label\":\"Watch\",\"variant\":\"outline\",\"onClickAction\":{\"type\":\"resource.open\",\"payload\":{\"url\":{{ (item.url) | tojson }}}}}]}{%-endfor-%}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]},{\"type\":\"Divider\"},{\"type\":\"Col\",\"gap\":2,\"children\":[{%- set _c -%},{\"type\":\"Caption\",\"value\":\"Reading\",\"color\":\"secondary\"}{%-for item in reads -%},{\"type\":\"Row\",\"key\":{{ (item.id) | tojson }},\"gap\":2,\"align\":\"center\",\"children\":[{\"type\":\"Icon\",\"name\":\"book-open\",\"size\":\"sm\"},{\"type\":\"Col\",\"children\":[{\"type\":\"Text\",\"value\":{{ (item.title) | tojson }},\"size\":\"sm\",\"weight\":\"semibold\",\"maxLines\":2},{\"type\":\"Caption\",\"value\":{{ (item.source) | tojson }},\"size\":\"sm\",\"color\":\"tertiary\"}]},{\"type\":\"Spacer\"},{\"type\":\"Button\",\"label\":\"Read\",\"variant\":\"outline\",\"onClickAction\":{\"type\":\"resource.open\",\"payload\":{\"url\":{{ (item.url) | tojson }}}}}]}{%-endfor-%}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]},{\"type\":\"Divider\"},{\"type\":\"Caption\",\"value\":{{ (disclaimer) | tojson }},\"size\":\"sm\",\"color\":\"secondary\"}]}]}",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "tips": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "text"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "videos": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "source",
+            "url"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "reads": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "source",
+            "url"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "disclaimer": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "tips",
+      "videos",
+      "reads",
+      "disclaimer"
+    ],
+    "additionalProperties": false
+  },
+  "outputJsonPreview": {
+    "type": "Card",
+    "size": "md",
+    "children": [
+      {
+        "type": "Col",
+        "gap": 3,
+        "children": [
+          {
+            "type": "Row",
+            "align": "center",
+            "gap": 2,
+            "children": [
+              {
+                "type": "Box",
+                "background": "blue-500",
+                "radius": "full",
+                "padding": 1.5,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "sparkle",
+                    "color": "white",
+                    "size": "lg"
+                  }
+                ]
+              },
+              {
+                "type": "Title",
+                "value": "Sleep agent",
+                "size": "md"
+              },
+              {
+                "type": "Spacer"
+              },
+              {
+                "type": "Badge",
+                "label": "Sleep",
+                "variant": "soft",
+                "color": "info"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 2,
+            "children": [
+              {
+                "type": "Caption",
+                "value": "Quick tips",
+                "color": "secondary"
+              },
+              {
+                "type": "Row",
+                "key": "t1",
+                "gap": 2,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "check-circle",
+                    "color": "success",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Keep a regular sleep/wake time—weekends too.",
+                    "size": "sm"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "t2",
+                "gap": 2,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "check-circle",
+                    "color": "success",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Get 10–30 min of morning light each day.",
+                    "size": "sm"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "t3",
+                "gap": 2,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "check-circle",
+                    "color": "success",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Avoid caffeine within 8 hours of bedtime.",
+                    "size": "sm"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "t4",
+                "gap": 2,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "check-circle",
+                    "color": "success",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Power down screens 60 minutes before bed.",
+                    "size": "sm"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "t5",
+                "gap": 2,
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "check-circle",
+                    "color": "success",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Keep your room cool, dark, and quiet.",
+                    "size": "sm"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Divider"
+          },
+          {
+            "type": "Col",
+            "gap": 2,
+            "children": [
+              {
+                "type": "Caption",
+                "value": "Videos",
+                "color": "secondary"
+              },
+              {
+                "type": "Row",
+                "key": "v1",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "play",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "Sleep is your superpower (TED Talk)",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "TED",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Watch",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://www.ted.com/talks/matt_walker_sleep_is_your_superpower"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "v2",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "play",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "Talks about sleep (TED Topic)",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "TED",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Watch",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://www.ted.com/topics/sleep"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "v3",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "play",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "What would happen if you didn’t sleep? (TED‑Ed)",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "TED‑Ed",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Watch",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://ed.ted.com/lessons/what-would-happen-if-you-didn-t-sleep-claudia-aguirre"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Divider"
+          },
+          {
+            "type": "Col",
+            "gap": 2,
+            "children": [
+              {
+                "type": "Caption",
+                "value": "Reading",
+                "color": "secondary"
+              },
+              {
+                "type": "Row",
+                "key": "r1",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "book-open",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "CDC: Sleep and Sleep Disorders",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "CDC",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Read",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://www.cdc.gov/sleep/index.html"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "r2",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "book-open",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "MedlinePlus: Insomnia",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "NIH MedlinePlus",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Read",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://medlineplus.gov/insomnia.html"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "key": "r3",
+                "gap": 2,
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Icon",
+                    "name": "book-open",
+                    "size": "sm"
+                  },
+                  {
+                    "type": "Col",
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "Sleep Foundation: Sleep Hygiene",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "Sleep Foundation",
+                        "size": "sm",
+                        "color": "tertiary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "label": "Read",
+                    "variant": "outline",
+                    "onClickAction": {
+                      "type": "resource.open",
+                      "payload": {
+                        "url": "https://www.sleepfoundation.org/sleep-hygiene"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Divider"
+          },
+          {
+            "type": "Caption",
+            "value": "Not medical advice. For persistent insomnia, snoring, or breathing pauses, see a clinician.",
+            "size": "sm",
+            "color": "secondary"
+          }
+        ]
+      }
+    ]
+  },
+  "encodedWidget": "eyJpZCI6IjdlOWU4ZWI4LTZiZGMtNGRkOC1hNTZhLTdhYjZjYTU3YjQ3MSIsIm5hbWUiOiJTbGVlcCBoZWxwZXIiLCJ2aWV3IjoiPENhcmQgc2l6ZT1cIm1kXCI-XG4gIDxDb2wgZ2FwPXszfT5cbiAgICA8Um93IGFsaWduPVwiY2VudGVyXCIgZ2FwPXsyfT5cbiAgICAgIDxCb3ggYmFja2dyb3VuZD1cImJsdWUtNTAwXCIgcmFkaXVzPVwiZnVsbFwiIHBhZGRpbmc9ezEuNX0-XG4gICAgICAgIDxJY29uIG5hbWU9XCJzcGFya2xlXCIgY29sb3I9XCJ3aGl0ZVwiIHNpemU9XCJsZ1wiIC8-XG4gICAgICA8L0JveD5cbiAgICAgIDxUaXRsZSB2YWx1ZT17dGl0bGV9IHNpemU9XCJtZFwiIC8-XG4gICAgICA8U3BhY2VyIC8-XG4gICAgICA8QmFkZ2UgbGFiZWw9XCJTbGVlcFwiIHZhcmlhbnQ9XCJzb2Z0XCIgY29sb3I9XCJpbmZvXCIgLz5cbiAgICA8L1Jvdz5cblxuICAgIDxDb2wgZ2FwPXsyfT5cbiAgICAgIDxDYXB0aW9uIHZhbHVlPVwiUXVpY2sgdGlwc1wiIGNvbG9yPVwic2Vjb25kYXJ5XCIgLz5cbiAgICAgIHt0aXBzLm1hcCgoaXRlbSkgPT4gKFxuICAgICAgICA8Um93IGtleT17aXRlbS5pZH0gZ2FwPXsyfT5cbiAgICAgICAgICA8SWNvbiBuYW1lPVwiY2hlY2stY2lyY2xlXCIgY29sb3I9XCJzdWNjZXNzXCIgc2l6ZT1cInNtXCIgLz5cbiAgICAgICAgICA8VGV4dCB2YWx1ZT17aXRlbS50ZXh0fSBzaXplPVwic21cIiAvPlxuICAgICAgICA8L1Jvdz5cbiAgICAgICkpfVxuICAgIDwvQ29sPlxuXG4gICAgPERpdmlkZXIgLz5cblxuICAgIDxDb2wgZ2FwPXsyfT5cbiAgICAgIDxDYXB0aW9uIHZhbHVlPVwiVmlkZW9zXCIgY29sb3I9XCJzZWNvbmRhcnlcIiAvPlxuICAgICAge3ZpZGVvcy5tYXAoKGl0ZW0pID0-IChcbiAgICAgICAgPFJvdyBrZXk9e2l0ZW0uaWR9IGdhcD17Mn0gYWxpZ249XCJjZW50ZXJcIj5cbiAgICAgICAgICA8SWNvbiBuYW1lPVwicGxheVwiIHNpemU9XCJzbVwiIC8-XG4gICAgICAgICAgPENvbD5cbiAgICAgICAgICAgIDxUZXh0IHZhbHVlPXtpdGVtLnRpdGxlfSBzaXplPVwic21cIiB3ZWlnaHQ9XCJzZW1pYm9sZFwiIG1heExpbmVzPXsyfSAvPlxuICAgICAgICAgICAgPENhcHRpb24gdmFsdWU9e2l0ZW0uc291cmNlfSBzaXplPVwic21cIiBjb2xvcj1cInRlcnRpYXJ5XCIgLz5cbiAgICAgICAgICA8L0NvbD5cbiAgICAgICAgICA8U3BhY2VyIC8-XG4gICAgICAgICAgPEJ1dHRvblxuICAgICAgICAgICAgbGFiZWw9XCJXYXRjaFwiXG4gICAgICAgICAgICB2YXJpYW50PVwib3V0bGluZVwiXG4gICAgICAgICAgICBvbkNsaWNrQWN0aW9uPXt7XG4gICAgICAgICAgICAgIHR5cGU6IFwicmVzb3VyY2Uub3BlblwiLFxuICAgICAgICAgICAgICBwYXlsb2FkOiB7IHVybDogaXRlbS51cmwgfSxcbiAgICAgICAgICAgIH19XG4gICAgICAgICAgLz5cbiAgICAgICAgPC9Sb3c-XG4gICAgICApKX1cbiAgICA8L0NvbD5cblxuICAgIDxEaXZpZGVyIC8-XG5cbiAgICA8Q29sIGdhcD17Mn0-XG4gICAgICA8Q2FwdGlvbiB2YWx1ZT1cIlJlYWRpbmdcIiBjb2xvcj1cInNlY29uZGFyeVwiIC8-XG4gICAgICB7cmVhZHMubWFwKChpdGVtKSA9PiAoXG4gICAgICAgIDxSb3cga2V5PXtpdGVtLmlkfSBnYXA9ezJ9IGFsaWduPVwiY2VudGVyXCI-XG4gICAgICAgICAgPEljb24gbmFtZT1cImJvb2stb3BlblwiIHNpemU9XCJzbVwiIC8-XG4gICAgICAgICAgPENvbD5cbiAgICAgICAgICAgIDxUZXh0IHZhbHVlPXtpdGVtLnRpdGxlfSBzaXplPVwic21cIiB3ZWlnaHQ9XCJzZW1pYm9sZFwiIG1heExpbmVzPXsyfSAvPlxuICAgICAgICAgICAgPENhcHRpb24gdmFsdWU9e2l0ZW0uc291cmNlfSBzaXplPVwic21cIiBjb2xvcj1cInRlcnRpYXJ5XCIgLz5cbiAgICAgICAgICA8L0NvbD5cbiAgICAgICAgICA8U3BhY2VyIC8-XG4gICAgICAgICAgPEJ1dHRvblxuICAgICAgICAgICAgbGFiZWw9XCJSZWFkXCJcbiAgICAgICAgICAgIHZhcmlhbnQ9XCJvdXRsaW5lXCJcbiAgICAgICAgICAgIG9uQ2xpY2tBY3Rpb249e3tcbiAgICAgICAgICAgICAgdHlwZTogXCJyZXNvdXJjZS5vcGVuXCIsXG4gICAgICAgICAgICAgIHBheWxvYWQ6IHsgdXJsOiBpdGVtLnVybCB9LFxuICAgICAgICAgICAgfX1cbiAgICAgICAgICAvPlxuICAgICAgICA8L1Jvdz5cbiAgICAgICkpfVxuICAgIDwvQ29sPlxuXG4gICAgPERpdmlkZXIgLz5cbiAgICA8Q2FwdGlvbiB2YWx1ZT17ZGlzY2xhaW1lcn0gc2l6ZT1cInNtXCIgY29sb3I9XCJzZWNvbmRhcnlcIiAvPlxuICA8L0NvbD5cbjwvQ2FyZD4iLCJkZWZhdWx0U3RhdGUiOnsidGl0bGUiOiJTbGVlcCBhZ2VudCIsInRpcHMiOlt7ImlkIjoidDEiLCJ0ZXh0IjoiS2VlcCBhIHJlZ3VsYXIgc2xlZXAvd2FrZSB0aW1l4oCUd2Vla2VuZHMgdG9vLiJ9LHsiaWQiOiJ0MiIsInRleHQiOiJHZXQgMTDigJMzMCBtaW4gb2YgbW9ybmluZyBsaWdodCBlYWNoIGRheS4ifSx7ImlkIjoidDMiLCJ0ZXh0IjoiQXZvaWQgY2FmZmVpbmUgd2l0aGluIDggaG91cnMgb2YgYmVkdGltZS4ifSx7ImlkIjoidDQiLCJ0ZXh0IjoiUG93ZXIgZG93biBzY3JlZW5zIDYwIG1pbnV0ZXMgYmVmb3JlIGJlZC4ifSx7ImlkIjoidDUiLCJ0ZXh0IjoiS2VlcCB5b3VyIHJvb20gY29vbCwgZGFyaywgYW5kIHF1aWV0LiJ9XSwidmlkZW9zIjpbeyJpZCI6InYxIiwidGl0bGUiOiJTbGVlcCBpcyB5b3VyIHN1cGVycG93ZXIgKFRFRCBUYWxrKSIsInNvdXJjZSI6IlRFRCIsInVybCI6Imh0dHBzOi8vd3d3LnRlZC5jb20vdGFsa3MvbWF0dF93YWxrZXJfc2xlZXBfaXNfeW91cl9zdXBlcnBvd2VyIn0seyJpZCI6InYyIiwidGl0bGUiOiJUYWxrcyBhYm91dCBzbGVlcCAoVEVEIFRvcGljKSIsInNvdXJjZSI6IlRFRCIsInVybCI6Imh0dHBzOi8vd3d3LnRlZC5jb20vdG9waWNzL3NsZWVwIn0seyJpZCI6InYzIiwidGl0bGUiOiJXaGF0IHdvdWxkIGhhcHBlbiBpZiB5b3UgZGlkbuKAmXQgc2xlZXA_IChURUTigJFFZCkiLCJzb3VyY2UiOiJURUTigJFFZCIsInVybCI6Imh0dHBzOi8vZWQudGVkLmNvbS9sZXNzb25zL3doYXQtd291bGQtaGFwcGVuLWlmLXlvdS1kaWRuLXQtc2xlZXAtY2xhdWRpYS1hZ3VpcnJlIn1dLCJyZWFkcyI6W3siaWQiOiJyMSIsInRpdGxlIjoiQ0RDOiBTbGVlcCBhbmQgU2xlZXAgRGlzb3JkZXJzIiwic291cmNlIjoiQ0RDIiwidXJsIjoiaHR0cHM6Ly93d3cuY2RjLmdvdi9zbGVlcC9pbmRleC5odG1sIn0seyJpZCI6InIyIiwidGl0bGUiOiJNZWRsaW5lUGx1czogSW5zb21uaWEiLCJzb3VyY2UiOiJOSUggTWVkbGluZVBsdXMiLCJ1cmwiOiJodHRwczovL21lZGxpbmVwbHVzLmdvdi9pbnNvbW5pYS5odG1sIn0seyJpZCI6InIzIiwidGl0bGUiOiJTbGVlcCBGb3VuZGF0aW9uOiBTbGVlcCBIeWdpZW5lIiwic291cmNlIjoiU2xlZXAgRm91bmRhdGlvbiIsInVybCI6Imh0dHBzOi8vd3d3LnNsZWVwZm91bmRhdGlvbi5vcmcvc2xlZXAtaHlnaWVuZSJ9XSwiZGlzY2xhaW1lciI6Ik5vdCBtZWRpY2FsIGFkdmljZS4gRm9yIHBlcnNpc3RlbnQgaW5zb21uaWEsIHNub3JpbmcsIG9yIGJyZWF0aGluZyBwYXVzZXMsIHNlZSBhIGNsaW5pY2lhbi4ifSwic3RhdGVzIjpbXSwic2NoZW1hIjoiaW1wb3J0IHsgeiB9IGZyb20gXCJ6b2RcIlxuXG5jb25zdCBUaXAgPSB6LnN0cmljdE9iamVjdCh7XG4gIGlkOiB6LnN0cmluZygpLFxuICB0ZXh0OiB6LnN0cmluZygpLFxufSlcblxuY29uc3QgUmVzb3VyY2UgPSB6LnN0cmljdE9iamVjdCh7XG4gIGlkOiB6LnN0cmluZygpLFxuICB0aXRsZTogei5zdHJpbmcoKSxcbiAgc291cmNlOiB6LnN0cmluZygpLFxuICB1cmw6IHouc3RyaW5nKCkudXJsKCksXG59KVxuXG5jb25zdCBXaWRnZXRTdGF0ZSA9IHouc3RyaWN0T2JqZWN0KHtcbiAgdGl0bGU6IHouc3RyaW5nKCksXG4gIHRpcHM6IHouYXJyYXkoVGlwKSxcbiAgdmlkZW9zOiB6LmFycmF5KFJlc291cmNlKSxcbiAgcmVhZHM6IHouYXJyYXkoUmVzb3VyY2UpLFxuICBkaXNjbGFpbWVyOiB6LnN0cmluZygpLFxufSlcblxuZXhwb3J0IGRlZmF1bHQgV2lkZ2V0U3RhdGUiLCJqc29uU2NoZW1hIjp7fSwic2NoZW1hTW9kZSI6InpvZCIsInNjaGVtYVZhbGlkaXR5IjoidmFsaWQiLCJ2aWV3VmFsaWRpdHkiOiJ2YWxpZCIsImRlZmF1bHRTdGF0ZVZhbGlkaXR5IjoidmFsaWQifQ"
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "w1",
+    "name": "Full Body Hypertrophy",
+    "difficulty": "Intermediate",
+    "exercises": [
+      "Squat",
+      "Bench Press",
+      "Bent Over Row"
+    ]
+  },
+  {
+    "id": "w2",
+    "name": "HIIT Cardio",
+    "difficulty": "Beginner",
+    "exercises": [
+      "Jumping Jacks",
+      "Burpees",
+      "Mountain Climbers"
+    ]
+  },
+  {
+    "id": "w3",
+    "name": "Yoga for Flexibility",
+    "difficulty": "All",
+    "exercises": [
+      "Downward Dog",
+      "Pigeon Pose",
+      "Child's Pose"
+    ]
+  }
+]

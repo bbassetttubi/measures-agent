@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Vitamin D3",
+    "benefits": [
+      "Bone health",
+      "Immune function"
+    ],
+    "dosage": "1000-5000 IU"
+  },
+  {
+    "name": "Magnesium Glycinate",
+    "benefits": [
+      "Sleep",
+      "Relaxation"
+    ],
+    "dosage": "200-400 mg"
+  },
+  {
+    "name": "Omega-3 Fish Oil",
+    "benefits": [
+      "Heart health",
+      "Inflammation"
+    ],
+    "dosage": "1000-2000 mg"
+  }
+]

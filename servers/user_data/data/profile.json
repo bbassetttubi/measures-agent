@@ -1,0 +1,16 @@
+{
+  "id": "user_123",
+  "name": "Alex Doe",
+  "age": 34,
+  "sex": "Male",
+  "height_cm": 180,
+  "weight_kg": 82,
+  "goals": [
+    "Improve energy",
+    "Lower cholesterol",
+    "Build muscle"
+  ],
+  "medical_history": [
+    "Mild asthma"
+  ]
+}

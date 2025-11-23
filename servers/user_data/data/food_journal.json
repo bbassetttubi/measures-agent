@@ -1,0 +1,226 @@
+[
+  {
+    "date": "2025-11-14",
+    "meals": [
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      },
+      {
+        "name": "Salmon & Quinoa",
+        "calories": 600,
+        "protein": 35,
+        "carbs": 45,
+        "fat": 25
+      },
+      {
+        "name": "Oatmeal & Berries",
+        "calories": 350,
+        "protein": 12,
+        "carbs": 60,
+        "fat": 6
+      }
+    ],
+    "summary": {
+      "calories": 1400,
+      "protein": 87,
+      "carbs": 120,
+      "fat": 51
+    }
+  },
+  {
+    "date": "2025-11-15",
+    "meals": [
+      {
+        "name": "Salmon & Quinoa",
+        "calories": 600,
+        "protein": 35,
+        "carbs": 45,
+        "fat": 25
+      },
+      {
+        "name": "Avocado Toast",
+        "calories": 300,
+        "protein": 8,
+        "carbs": 30,
+        "fat": 15
+      },
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      }
+    ],
+    "summary": {
+      "calories": 1350,
+      "protein": 83,
+      "carbs": 90,
+      "fat": 60
+    }
+  },
+  {
+    "date": "2025-11-16",
+    "meals": [
+      {
+        "name": "Protein Shake",
+        "calories": 150,
+        "protein": 25,
+        "carbs": 5,
+        "fat": 2
+      },
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      },
+      {
+        "name": "Salmon & Quinoa",
+        "calories": 600,
+        "protein": 35,
+        "carbs": 45,
+        "fat": 25
+      }
+    ],
+    "summary": {
+      "calories": 1200,
+      "protein": 100,
+      "carbs": 65,
+      "fat": 47
+    }
+  },
+  {
+    "date": "2025-11-17",
+    "meals": [
+      {
+        "name": "Protein Shake",
+        "calories": 150,
+        "protein": 25,
+        "carbs": 5,
+        "fat": 2
+      },
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      },
+      {
+        "name": "Salmon & Quinoa",
+        "calories": 600,
+        "protein": 35,
+        "carbs": 45,
+        "fat": 25
+      }
+    ],
+    "summary": {
+      "calories": 1200,
+      "protein": 100,
+      "carbs": 65,
+      "fat": 47
+    }
+  },
+  {
+    "date": "2025-11-18",
+    "meals": [
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      },
+      {
+        "name": "Salmon & Quinoa",
+        "calories": 600,
+        "protein": 35,
+        "carbs": 45,
+        "fat": 25
+      },
+      {
+        "name": "Oatmeal & Berries",
+        "calories": 350,
+        "protein": 12,
+        "carbs": 60,
+        "fat": 6
+      }
+    ],
+    "summary": {
+      "calories": 1400,
+      "protein": 87,
+      "carbs": 120,
+      "fat": 51
+    }
+  },
+  {
+    "date": "2025-11-19",
+    "meals": [
+      {
+        "name": "Oatmeal & Berries",
+        "calories": 350,
+        "protein": 12,
+        "carbs": 60,
+        "fat": 6
+      },
+      {
+        "name": "Avocado Toast",
+        "calories": 300,
+        "protein": 8,
+        "carbs": 30,
+        "fat": 15
+      },
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      }
+    ],
+    "summary": {
+      "calories": 1100,
+      "protein": 60,
+      "carbs": 105,
+      "fat": 41
+    }
+  },
+  {
+    "date": "2025-11-20",
+    "meals": [
+      {
+        "name": "Oatmeal & Berries",
+        "calories": 350,
+        "protein": 12,
+        "carbs": 60,
+        "fat": 6
+      },
+      {
+        "name": "Grilled Chicken Salad",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 15,
+        "fat": 20
+      },
+      {
+        "name": "Avocado Toast",
+        "calories": 300,
+        "protein": 8,
+        "carbs": 30,
+        "fat": 15
+      }
+    ],
+    "summary": {
+      "calories": 1100,
+      "protein": 60,
+      "carbs": 105,
+      "fat": 41
+    }
+  }
+]

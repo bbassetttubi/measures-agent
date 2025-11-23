@@ -1,0 +1,350 @@
+{
+  "version": "1.0",
+  "name": "Mindfulness Picks",
+  "template": "{\"type\":\"ListView\",\"status\":{\"text\":{{ (heading) | tojson }},\"icon\":\"sparkle\"},\"children\":[{%- set _c -%}{%-for item in items -%},{\"type\":\"ListViewItem\",\"key\":{{ (item.id) | tojson }},\"gap\":3,\"onClickAction\":{\"type\":\"meditation.open\",\"payload\":{\"id\":{{ (item.id) | tojson }},\"platform\":{{ (item.platform) | tojson }}}},\"children\":[{\"type\":\"Box\",\"background\":\"alpha-10\",\"radius\":\"sm\",\"padding\":2,\"children\":[{\"type\":\"Icon\",\"name\":\"play\",\"size\":\"lg\"}]},{\"type\":\"Col\",\"gap\":0,\"children\":[{\"type\":\"Text\",\"value\":{{ (item.title) | tojson }},\"size\":\"sm\",\"weight\":\"semibold\"},{\"type\":\"Caption\",\"value\":{{ (item.subtitle) | tojson }},\"color\":\"secondary\"}]},{\"type\":\"Spacer\"},{\"type\":\"Badge\",\"label\":{{ (item.tag) | tojson }},\"variant\":\"soft\",\"color\":\"info\"},{\"type\":\"Icon\",\"name\":\"external-link\"}]}{%-endfor-%}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]}",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "heading": {
+        "type": "string"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "calm",
+                "headspace",
+                "youtube"
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "platform",
+            "title",
+            "subtitle",
+            "tag"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "heading",
+      "items"
+    ],
+    "additionalProperties": false
+  },
+  "outputJsonPreview": {
+    "type": "ListView",
+    "status": {
+      "text": "Mindfulness picks",
+      "icon": "sparkle"
+    },
+    "children": [
+      {
+        "type": "ListViewItem",
+        "key": "calm-5min-box-breathing",
+        "gap": 3,
+        "onClickAction": {
+          "type": "meditation.open",
+          "payload": {
+            "id": "calm-5min-box-breathing",
+            "platform": "calm"
+          }
+        },
+        "children": [
+          {
+            "type": "Box",
+            "background": "alpha-10",
+            "radius": "sm",
+            "padding": 2,
+            "children": [
+              {
+                "type": "Icon",
+                "name": "play",
+                "size": "lg"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Text",
+                "value": "5‑Minute Box Breathing",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              {
+                "type": "Caption",
+                "value": "Calm • 5 min • Premium",
+                "color": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Stress",
+            "variant": "soft",
+            "color": "info"
+          },
+          {
+            "type": "Icon",
+            "name": "external-link"
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "headspace-10min-body-scan",
+        "gap": 3,
+        "onClickAction": {
+          "type": "meditation.open",
+          "payload": {
+            "id": "headspace-10min-body-scan",
+            "platform": "headspace"
+          }
+        },
+        "children": [
+          {
+            "type": "Box",
+            "background": "alpha-10",
+            "radius": "sm",
+            "padding": 2,
+            "children": [
+              {
+                "type": "Icon",
+                "name": "play",
+                "size": "lg"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Text",
+                "value": "10‑Minute Body Scan",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              {
+                "type": "Caption",
+                "value": "Headspace • 10 min • Premium",
+                "color": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Sleep",
+            "variant": "soft",
+            "color": "info"
+          },
+          {
+            "type": "Icon",
+            "name": "external-link"
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "yt-8min-mindful-moment",
+        "gap": 3,
+        "onClickAction": {
+          "type": "meditation.open",
+          "payload": {
+            "id": "yt-8min-mindful-moment",
+            "platform": "youtube"
+          }
+        },
+        "children": [
+          {
+            "type": "Box",
+            "background": "alpha-10",
+            "radius": "sm",
+            "padding": 2,
+            "children": [
+              {
+                "type": "Icon",
+                "name": "play",
+                "size": "lg"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Text",
+                "value": "8‑Minute Mindful Moment",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              {
+                "type": "Caption",
+                "value": "YouTube • 8 min • Free",
+                "color": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Focus",
+            "variant": "soft",
+            "color": "info"
+          },
+          {
+            "type": "Icon",
+            "name": "external-link"
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "calm-12min-lake-visualization",
+        "gap": 3,
+        "onClickAction": {
+          "type": "meditation.open",
+          "payload": {
+            "id": "calm-12min-lake-visualization",
+            "platform": "calm"
+          }
+        },
+        "children": [
+          {
+            "type": "Box",
+            "background": "alpha-10",
+            "radius": "sm",
+            "padding": 2,
+            "children": [
+              {
+                "type": "Icon",
+                "name": "play",
+                "size": "lg"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Text",
+                "value": "12‑Minute Lake Visualization",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              {
+                "type": "Caption",
+                "value": "Calm • 12 min • Premium",
+                "color": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Relax",
+            "variant": "soft",
+            "color": "info"
+          },
+          {
+            "type": "Icon",
+            "name": "external-link"
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "headspace-3min-reset",
+        "gap": 3,
+        "onClickAction": {
+          "type": "meditation.open",
+          "payload": {
+            "id": "headspace-3min-reset",
+            "platform": "headspace"
+          }
+        },
+        "children": [
+          {
+            "type": "Box",
+            "background": "alpha-10",
+            "radius": "sm",
+            "padding": 2,
+            "children": [
+              {
+                "type": "Icon",
+                "name": "play",
+                "size": "lg"
+              }
+            ]
+          },
+          {
+            "type": "Col",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Text",
+                "value": "3‑Minute Reset",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              {
+                "type": "Caption",
+                "value": "Headspace • 3 min • Premium",
+                "color": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Stress",
+            "variant": "soft",
+            "color": "info"
+          },
+          {
+            "type": "Icon",
+            "name": "external-link"
+          }
+        ]
+      }
+    ]
+  },
+  "encodedWidget": "eyJpZCI6IjNmZmM2NmQ1LTRiNmYtNDNmMC1hZGIzLTc0MWI5Mjk4M2MyYiIsIm5hbWUiOiJNaW5kZnVsbmVzcyBQaWNrcyIsInZpZXciOiI8TGlzdFZpZXcgc3RhdHVzPXt7IHRleHQ6IGhlYWRpbmcsIGljb246IFwic3BhcmtsZVwiIH19PlxuICB7aXRlbXMubWFwKChpdGVtKSA9PiAoXG4gICAgPExpc3RWaWV3SXRlbVxuICAgICAga2V5PXtpdGVtLmlkfVxuICAgICAgZ2FwPXszfVxuICAgICAgb25DbGlja0FjdGlvbj17e1xuICAgICAgICB0eXBlOiBcIm1lZGl0YXRpb24ub3BlblwiLFxuICAgICAgICBwYXlsb2FkOiB7IGlkOiBpdGVtLmlkLCBwbGF0Zm9ybTogaXRlbS5wbGF0Zm9ybSB9LFxuICAgICAgfX1cbiAgICA-XG4gICAgICA8Qm94IGJhY2tncm91bmQ9XCJhbHBoYS0xMFwiIHJhZGl1cz1cInNtXCIgcGFkZGluZz17Mn0-XG4gICAgICAgIDxJY29uIG5hbWU9XCJwbGF5XCIgc2l6ZT1cImxnXCIgLz5cbiAgICAgIDwvQm94PlxuXG4gICAgICA8Q29sIGdhcD17MH0-XG4gICAgICAgIDxUZXh0IHZhbHVlPXtpdGVtLnRpdGxlfSBzaXplPVwic21cIiB3ZWlnaHQ9XCJzZW1pYm9sZFwiIC8-XG4gICAgICAgIDxDYXB0aW9uIHZhbHVlPXtpdGVtLnN1YnRpdGxlfSBjb2xvcj1cInNlY29uZGFyeVwiIC8-XG4gICAgICA8L0NvbD5cblxuICAgICAgPFNwYWNlciAvPlxuICAgICAgPEJhZGdlIGxhYmVsPXtpdGVtLnRhZ30gdmFyaWFudD1cInNvZnRcIiBjb2xvcj1cImluZm9cIiAvPlxuICAgICAgPEljb24gbmFtZT1cImV4dGVybmFsLWxpbmtcIiAvPlxuICAgIDwvTGlzdFZpZXdJdGVtPlxuICApKX1cbjwvTGlzdFZpZXc-IiwiZGVmYXVsdFN0YXRlIjp7ImhlYWRpbmciOiJNaW5kZnVsbmVzcyBwaWNrcyIsIml0ZW1zIjpbeyJpZCI6ImNhbG0tNW1pbi1ib3gtYnJlYXRoaW5nIiwicGxhdGZvcm0iOiJjYWxtIiwidGl0bGUiOiI14oCRTWludXRlIEJveCBCcmVhdGhpbmciLCJzdWJ0aXRsZSI6IkNhbG0g4oCiIDUgbWluIOKAoiBQcmVtaXVtIiwidGFnIjoiU3RyZXNzIn0seyJpZCI6ImhlYWRzcGFjZS0xMG1pbi1ib2R5LXNjYW4iLCJwbGF0Zm9ybSI6ImhlYWRzcGFjZSIsInRpdGxlIjoiMTDigJFNaW51dGUgQm9keSBTY2FuIiwic3VidGl0bGUiOiJIZWFkc3BhY2Ug4oCiIDEwIG1pbiDigKIgUHJlbWl1bSIsInRhZyI6IlNsZWVwIn0seyJpZCI6Inl0LThtaW4tbWluZGZ1bC1tb21lbnQiLCJwbGF0Zm9ybSI6InlvdXR1YmUiLCJ0aXRsZSI6IjjigJFNaW51dGUgTWluZGZ1bCBNb21lbnQiLCJzdWJ0aXRsZSI6IllvdVR1YmUg4oCiIDggbWluIOKAoiBGcmVlIiwidGFnIjoiRm9jdXMifSx7ImlkIjoiY2FsbS0xMm1pbi1sYWtlLXZpc3VhbGl6YXRpb24iLCJwbGF0Zm9ybSI6ImNhbG0iLCJ0aXRsZSI6IjEy4oCRTWludXRlIExha2UgVmlzdWFsaXphdGlvbiIsInN1YnRpdGxlIjoiQ2FsbSDigKIgMTIgbWluIOKAoiBQcmVtaXVtIiwidGFnIjoiUmVsYXgifSx7ImlkIjoiaGVhZHNwYWNlLTNtaW4tcmVzZXQiLCJwbGF0Zm9ybSI6ImhlYWRzcGFjZSIsInRpdGxlIjoiM-KAkU1pbnV0ZSBSZXNldCIsInN1YnRpdGxlIjoiSGVhZHNwYWNlIOKAoiAzIG1pbiDigKIgUHJlbWl1bSIsInRhZyI6IlN0cmVzcyJ9XX0sInN0YXRlcyI6W10sInNjaGVtYSI6ImltcG9ydCB7IHogfSBmcm9tIFwiem9kXCJcblxuY29uc3QgU3VnZ2VzdGlvbiA9IHouc3RyaWN0T2JqZWN0KHtcbiAgaWQ6IHouc3RyaW5nKCksXG4gIHBsYXRmb3JtOiB6LmVudW0oW1wiY2FsbVwiLCBcImhlYWRzcGFjZVwiLCBcInlvdXR1YmVcIl0pLFxuICB0aXRsZTogei5zdHJpbmcoKSxcbiAgc3VidGl0bGU6IHouc3RyaW5nKCksXG4gIHRhZzogei5zdHJpbmcoKSxcbn0pXG5cbmNvbnN0IFdpZGdldFN0YXRlID0gei5zdHJpY3RPYmplY3Qoe1xuICBoZWFkaW5nOiB6LnN0cmluZygpLFxuICBpdGVtczogei5hcnJheShTdWdnZXN0aW9uKSxcbn0pXG5cbmV4cG9ydCBkZWZhdWx0IFdpZGdldFN0YXRlIiwianNvblNjaGVtYSI6e30sInNjaGVtYU1vZGUiOiJ6b2QiLCJzY2hlbWFWYWxpZGl0eSI6InZhbGlkIiwidmlld1ZhbGlkaXR5IjoidmFsaWQiLCJkZWZhdWx0U3RhdGVWYWxpZGl0eSI6InZhbGlkIn0"
+}

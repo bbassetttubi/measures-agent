@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Process files
+*.pid
+.web_app.pid
+
+# Test results
+test_*.log
+test_results*.log
+test_concurrency*.log
+test_routing*.log
+test_parallel*.log
+test_fixes*.log
+
+# LanceDB
+*.lance/
+
+# Temporary files
+*.tmp
+.cache/
+

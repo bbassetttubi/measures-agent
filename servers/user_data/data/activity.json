@@ -1,0 +1,320 @@
+[
+  {
+    "date": "2025-10-22",
+    "steps": 9685,
+    "calories_burned": 2149,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 42,
+        "avg_heart_rate": 111
+      }
+    ]
+  },
+  {
+    "date": "2025-10-23",
+    "steps": 11101,
+    "calories_burned": 2032,
+    "workouts": []
+  },
+  {
+    "date": "2025-10-24",
+    "steps": 10343,
+    "calories_burned": 1714,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 45,
+        "avg_heart_rate": 150
+      }
+    ]
+  },
+  {
+    "date": "2025-10-25",
+    "steps": 6630,
+    "calories_burned": 1700,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 45,
+        "avg_heart_rate": 149
+      }
+    ]
+  },
+  {
+    "date": "2025-10-26",
+    "steps": 9711,
+    "calories_burned": 1917,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 27,
+        "avg_heart_rate": 151
+      }
+    ]
+  },
+  {
+    "date": "2025-10-27",
+    "steps": 11086,
+    "calories_burned": 2137,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 45,
+        "avg_heart_rate": 118
+      }
+    ]
+  },
+  {
+    "date": "2025-10-28",
+    "steps": 10021,
+    "calories_burned": 1893,
+    "workouts": [
+      {
+        "type": "HIIT",
+        "duration_minutes": 34,
+        "avg_heart_rate": 157
+      }
+    ]
+  },
+  {
+    "date": "2025-10-29",
+    "steps": 8997,
+    "calories_burned": 1943,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 58,
+        "avg_heart_rate": 138
+      }
+    ]
+  },
+  {
+    "date": "2025-10-30",
+    "steps": 11078,
+    "calories_burned": 2162,
+    "workouts": []
+  },
+  {
+    "date": "2025-10-31",
+    "steps": 8371,
+    "calories_burned": 1816,
+    "workouts": [
+      {
+        "type": "HIIT",
+        "duration_minutes": 34,
+        "avg_heart_rate": 112
+      }
+    ]
+  },
+  {
+    "date": "2025-11-01",
+    "steps": 5195,
+    "calories_burned": 1966,
+    "workouts": [
+      {
+        "type": "Yoga",
+        "duration_minutes": 56,
+        "avg_heart_rate": 121
+      }
+    ]
+  },
+  {
+    "date": "2025-11-02",
+    "steps": 6330,
+    "calories_burned": 2019,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 53,
+        "avg_heart_rate": 110
+      }
+    ]
+  },
+  {
+    "date": "2025-11-03",
+    "steps": 5600,
+    "calories_burned": 1551,
+    "workouts": [
+      {
+        "type": "HIIT",
+        "duration_minutes": 22,
+        "avg_heart_rate": 148
+      }
+    ]
+  },
+  {
+    "date": "2025-11-04",
+    "steps": 4972,
+    "calories_burned": 1640,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 28,
+        "avg_heart_rate": 111
+      }
+    ]
+  },
+  {
+    "date": "2025-11-05",
+    "steps": 4756,
+    "calories_burned": 1629,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 22,
+        "avg_heart_rate": 160
+      }
+    ]
+  },
+  {
+    "date": "2025-11-06",
+    "steps": 4509,
+    "calories_burned": 1557,
+    "workouts": []
+  },
+  {
+    "date": "2025-11-07",
+    "steps": 5525,
+    "calories_burned": 1525,
+    "workouts": [
+      {
+        "type": "Yoga",
+        "duration_minutes": 26,
+        "avg_heart_rate": 159
+      }
+    ]
+  },
+  {
+    "date": "2025-11-08",
+    "steps": 9214,
+    "calories_burned": 1808,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 54,
+        "avg_heart_rate": 115
+      }
+    ]
+  },
+  {
+    "date": "2025-11-09",
+    "steps": 6411,
+    "calories_burned": 1636,
+    "workouts": []
+  },
+  {
+    "date": "2025-11-10",
+    "steps": 4753,
+    "calories_burned": 1532,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 40,
+        "avg_heart_rate": 131
+      }
+    ]
+  },
+  {
+    "date": "2025-11-11",
+    "steps": 6900,
+    "calories_burned": 1627,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 31,
+        "avg_heart_rate": 144
+      }
+    ]
+  },
+  {
+    "date": "2025-11-12",
+    "steps": 4178,
+    "calories_burned": 1853,
+    "workouts": [
+      {
+        "type": "HIIT",
+        "duration_minutes": 43,
+        "avg_heart_rate": 111
+      }
+    ]
+  },
+  {
+    "date": "2025-11-13",
+    "steps": 11650,
+    "calories_burned": 1886,
+    "workouts": [
+      {
+        "type": "HIIT",
+        "duration_minutes": 51,
+        "avg_heart_rate": 154
+      }
+    ]
+  },
+  {
+    "date": "2025-11-14",
+    "steps": 10559,
+    "calories_burned": 2004,
+    "workouts": []
+  },
+  {
+    "date": "2025-11-15",
+    "steps": 9392,
+    "calories_burned": 2063,
+    "workouts": []
+  },
+  {
+    "date": "2025-11-16",
+    "steps": 7149,
+    "calories_burned": 1591,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 41,
+        "avg_heart_rate": 119
+      }
+    ]
+  },
+  {
+    "date": "2025-11-17",
+    "steps": 4224,
+    "calories_burned": 1945,
+    "workouts": [
+      {
+        "type": "Weightlifting",
+        "duration_minutes": 43,
+        "avg_heart_rate": 116
+      }
+    ]
+  },
+  {
+    "date": "2025-11-18",
+    "steps": 5673,
+    "calories_burned": 1802,
+    "workouts": [
+      {
+        "type": "Run",
+        "duration_minutes": 51,
+        "avg_heart_rate": 128
+      }
+    ]
+  },
+  {
+    "date": "2025-11-19",
+    "steps": 4914,
+    "calories_burned": 1944,
+    "workouts": []
+  },
+  {
+    "date": "2025-11-20",
+    "steps": 7685,
+    "calories_burned": 1804,
+    "workouts": [
+      {
+        "type": "Yoga",
+        "duration_minutes": 42,
+        "avg_heart_rate": 114
+      }
+    ]
+  }
+]
