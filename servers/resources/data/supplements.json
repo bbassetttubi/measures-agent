@@ -1,26 +1,62 @@
 [
   {
+    "id": "vitamin-d3",
     "name": "Vitamin D3",
+    "tagline": "Bone health & immune support",
     "benefits": [
       "Bone health",
-      "Immune function"
+      "Immune function",
+      "Mood support"
     ],
-    "dosage": "1000-5000 IU"
+    "dosage": "1000-5000 IU daily",
+    "buyUrl": "https://www.thorne.com/products/dp/vitamin-d-1000"
   },
   {
+    "id": "magnesium-glycinate",
     "name": "Magnesium Glycinate",
+    "tagline": "Sleep & relaxation",
     "benefits": [
-      "Sleep",
-      "Relaxation"
+      "Sleep quality",
+      "Muscle relaxation",
+      "Stress reduction"
     ],
-    "dosage": "200-400 mg"
+    "dosage": "200-400 mg before bed",
+    "buyUrl": "https://www.thorne.com/products/dp/magnesium-bisglycinate"
   },
   {
+    "id": "omega-3",
     "name": "Omega-3 Fish Oil",
+    "tagline": "Heart & brain health",
     "benefits": [
       "Heart health",
-      "Inflammation"
+      "Brain function",
+      "Anti-inflammatory"
     ],
-    "dosage": "1000-2000 mg"
+    "dosage": "1000-2000 mg daily",
+    "buyUrl": "https://www.thorne.com/products/dp/super-epa"
+  },
+  {
+    "id": "coq10",
+    "name": "CoQ10",
+    "tagline": "Cellular energy & heart support",
+    "benefits": [
+      "Heart health",
+      "Cellular energy",
+      "Antioxidant"
+    ],
+    "dosage": "100-200 mg daily",
+    "buyUrl": "https://www.thorne.com/products/dp/coenzyme-q10"
+  },
+  {
+    "id": "basic-nutrients",
+    "name": "Basic Nutrients 2/Day",
+    "tagline": "Comprehensive multivitamin",
+    "benefits": [
+      "Foundational nutrition",
+      "Energy support",
+      "Overall wellness"
+    ],
+    "dosage": "2 capsules daily",
+    "buyUrl": "https://www.thorne.com/products/dp/basic-nutrients-2-day"
   }
 ]

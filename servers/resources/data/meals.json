@@ -1,0 +1,129 @@
+[
+  {
+    "id": "cholesterol-lowering-plan",
+    "name": "Heart-Healthy Cholesterol Plan",
+    "description": "Meals designed to help lower cholesterol and support cardiovascular health",
+    "meals": [
+      {
+        "id": "b1",
+        "mealType": "Breakfast",
+        "title": "Oatmeal with Berries & Walnuts",
+        "videoUrl": "https://www.youtube.com/watch?v=oatmeal-recipe",
+        "instacartUrl": "https://www.instacart.com/store/items/oatmeal-berries"
+      },
+      {
+        "id": "s1",
+        "mealType": "Snack",
+        "title": "Apple with Almond Butter",
+        "videoUrl": "https://www.youtube.com/watch?v=healthy-snack",
+        "instacartUrl": "https://www.instacart.com/store/items/apples-almond-butter"
+      },
+      {
+        "id": "l1",
+        "mealType": "Lunch",
+        "title": "Grilled Salmon with Quinoa & Vegetables",
+        "videoUrl": "https://www.youtube.com/watch?v=salmon-quinoa",
+        "instacartUrl": "https://www.instacart.com/store/items/salmon-quinoa"
+      },
+      {
+        "id": "s2",
+        "mealType": "Snack",
+        "title": "Hummus with Carrot Sticks",
+        "videoUrl": "https://www.youtube.com/watch?v=hummus-recipe",
+        "instacartUrl": "https://www.instacart.com/store/items/hummus-carrots"
+      },
+      {
+        "id": "d1",
+        "mealType": "Dinner",
+        "title": "Baked Chicken with Brown Rice & Broccoli",
+        "videoUrl": "https://www.youtube.com/watch?v=chicken-rice",
+        "instacartUrl": "https://www.instacart.com/store/items/chicken-rice-broccoli"
+      }
+    ]
+  },
+  {
+    "id": "energy-boost-plan",
+    "name": "Energy-Boosting Meal Plan",
+    "description": "Nutrient-dense meals to improve energy levels throughout the day",
+    "meals": [
+      {
+        "id": "b2",
+        "mealType": "Breakfast",
+        "title": "Greek Yogurt with Granola & Chia Seeds",
+        "videoUrl": "https://www.youtube.com/watch?v=yogurt-bowl",
+        "instacartUrl": "https://www.instacart.com/store/items/greek-yogurt"
+      },
+      {
+        "id": "s3",
+        "mealType": "Snack",
+        "title": "Trail Mix with Nuts & Dried Fruit",
+        "videoUrl": "https://www.youtube.com/watch?v=trail-mix",
+        "instacartUrl": "https://www.instacart.com/store/items/trail-mix"
+      },
+      {
+        "id": "l2",
+        "mealType": "Lunch",
+        "title": "Turkey & Avocado Wrap with Side Salad",
+        "videoUrl": "https://www.youtube.com/watch?v=turkey-wrap",
+        "instacartUrl": "https://www.instacart.com/store/items/turkey-avocado"
+      },
+      {
+        "id": "s4",
+        "mealType": "Snack",
+        "title": "Smoothie with Spinach, Banana & Protein",
+        "videoUrl": "https://www.youtube.com/watch?v=green-smoothie",
+        "instacartUrl": "https://www.instacart.com/store/items/smoothie-ingredients"
+      },
+      {
+        "id": "d2",
+        "mealType": "Dinner",
+        "title": "Lentil Curry with Whole Grain Naan",
+        "videoUrl": "https://www.youtube.com/watch?v=lentil-curry",
+        "instacartUrl": "https://www.instacart.com/store/items/lentils-curry"
+      }
+    ]
+  },
+  {
+    "id": "muscle-building-plan",
+    "name": "High-Protein Muscle Building Plan",
+    "description": "Protein-rich meals to support muscle growth and recovery",
+    "meals": [
+      {
+        "id": "b3",
+        "mealType": "Breakfast",
+        "title": "Scrambled Eggs with Whole Wheat Toast & Avocado",
+        "videoUrl": "https://www.youtube.com/watch?v=scrambled-eggs",
+        "instacartUrl": "https://www.instacart.com/store/items/eggs-avocado"
+      },
+      {
+        "id": "s5",
+        "mealType": "Snack",
+        "title": "Protein Shake with Berries",
+        "videoUrl": "https://www.youtube.com/watch?v=protein-shake",
+        "instacartUrl": "https://www.instacart.com/store/items/protein-powder"
+      },
+      {
+        "id": "l3",
+        "mealType": "Lunch",
+        "title": "Grilled Chicken Breast with Sweet Potato",
+        "videoUrl": "https://www.youtube.com/watch?v=grilled-chicken",
+        "instacartUrl": "https://www.instacart.com/store/items/chicken-sweet-potato"
+      },
+      {
+        "id": "s6",
+        "mealType": "Snack",
+        "title": "Cottage Cheese with Pineapple",
+        "videoUrl": "https://www.youtube.com/watch?v=cottage-cheese",
+        "instacartUrl": "https://www.instacart.com/store/items/cottage-cheese"
+      },
+      {
+        "id": "d3",
+        "mealType": "Dinner",
+        "title": "Lean Steak with Quinoa & Green Beans",
+        "videoUrl": "https://www.youtube.com/watch?v=steak-quinoa",
+        "instacartUrl": "https://www.instacart.com/store/items/steak-quinoa"
+      }
+    ]
+  }
+]
+

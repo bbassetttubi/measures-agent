@@ -297,4 +297,5 @@ class SimpleMCPClient:
         if tool_name in ["get_biomarkers", "get_activity_log", "get_food_journal", "get_sleep_data", "get_user_profile"]:
             return self.call_tool_sync("user_data", tool_name, args)
         else:
+            # All resource tools including widget generation
             return self.call_tool_sync("resources", tool_name, args)

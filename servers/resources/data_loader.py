@@ -37,6 +37,15 @@ def get_supplement_info(name: str) -> Optional[Dict[str, Any]]:
             return s
     return None
 
+def get_meal_plan(plan_type: str) -> Optional[Dict[str, Any]]:
+    """Get meal plan by type (e.g., 'cholesterol', 'energy', 'muscle')."""
+    meal_plans = load_json("meals.json")
+    for plan in meal_plans:
+        if plan_type.lower() in plan['name'].lower() or plan_type.lower() in plan['id'].lower():
+            return plan
+    # Return first plan as default if no match
+    return meal_plans[0] if meal_plans else None
+
 def search_knowledge_base(query: str) -> List[Dict[str, Any]]:
     """
     Searches the LanceDB knowledge base.

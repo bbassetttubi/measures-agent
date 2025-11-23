@@ -3,30 +3,190 @@
     "id": "w1",
     "name": "Full Body Hypertrophy",
     "difficulty": "Intermediate",
+    "duration": "45 min",
+    "description": "Build lean muscle with compound movements targeting all major muscle groups.",
     "exercises": [
       "Squat",
       "Bench Press",
-      "Bent Over Row"
+      "Bent Over Row",
+      "Overhead Press",
+      "Deadlift"
+    ],
+    "videos": [
+      {
+        "id": "v1",
+        "title": "Barbell Squats",
+        "duration": "8 min",
+        "focus": "Legs & Core"
+      },
+      {
+        "id": "v2",
+        "title": "Bench Press Technique",
+        "duration": "7 min",
+        "focus": "Chest & Triceps"
+      },
+      {
+        "id": "v3",
+        "title": "Bent Over Rows",
+        "duration": "6 min",
+        "focus": "Back & Biceps"
+      },
+      {
+        "id": "v4",
+        "title": "Overhead Press",
+        "duration": "6 min",
+        "focus": "Shoulders"
+      },
+      {
+        "id": "v5",
+        "title": "Deadlift Form",
+        "duration": "10 min",
+        "focus": "Full Body"
+      }
     ]
   },
   {
     "id": "w2",
-    "name": "HIIT Cardio",
+    "name": "HIIT Cardio Blast",
     "difficulty": "Beginner",
+    "duration": "20 min",
+    "description": "High-intensity interval training to boost metabolism and burn calories without equipment.",
     "exercises": [
       "Jumping Jacks",
       "Burpees",
-      "Mountain Climbers"
+      "Mountain Climbers",
+      "High Knees",
+      "Jump Squats"
+    ],
+    "videos": [
+      {
+        "id": "v6",
+        "title": "Warm-up & Jumping Jacks",
+        "duration": "4 min",
+        "focus": "Warm-up"
+      },
+      {
+        "id": "v7",
+        "title": "Burpee Progression",
+        "duration": "5 min",
+        "focus": "Full Body"
+      },
+      {
+        "id": "v8",
+        "title": "Mountain Climbers",
+        "duration": "4 min",
+        "focus": "Core & Cardio"
+      },
+      {
+        "id": "v9",
+        "title": "High Knees & Jump Squats",
+        "duration": "5 min",
+        "focus": "Legs & Cardio"
+      },
+      {
+        "id": "v10",
+        "title": "Cool Down Stretches",
+        "duration": "2 min",
+        "focus": "Recovery"
+      }
     ]
   },
   {
     "id": "w3",
     "name": "Yoga for Flexibility",
     "difficulty": "All",
+    "duration": "30 min",
+    "description": "Gentle flow to improve flexibility, balance, and mindfulness.",
     "exercises": [
       "Downward Dog",
       "Pigeon Pose",
-      "Child's Pose"
+      "Child's Pose",
+      "Warrior II",
+      "Tree Pose"
+    ],
+    "videos": [
+      {
+        "id": "v11",
+        "title": "Sun Salutation Flow",
+        "duration": "6 min",
+        "focus": "Warm-up"
+      },
+      {
+        "id": "v12",
+        "title": "Downward Dog Mastery",
+        "duration": "5 min",
+        "focus": "Flexibility"
+      },
+      {
+        "id": "v13",
+        "title": "Hip Opening: Pigeon Pose",
+        "duration": "7 min",
+        "focus": "Hips & Flexibility"
+      },
+      {
+        "id": "v14",
+        "title": "Warrior Poses",
+        "duration": "6 min",
+        "focus": "Strength & Balance"
+      },
+      {
+        "id": "v15",
+        "title": "Balance & Tree Pose",
+        "duration": "4 min",
+        "focus": "Balance"
+      },
+      {
+        "id": "v16",
+        "title": "Relaxation & Child's Pose",
+        "duration": "2 min",
+        "focus": "Recovery"
+      }
+    ]
+  },
+  {
+    "id": "w4",
+    "name": "Cardio for Cholesterol",
+    "difficulty": "Intermediate",
+    "duration": "35 min",
+    "description": "Cardiovascular exercises specifically designed to help lower cholesterol and improve heart health.",
+    "exercises": [
+      "Brisk Walking",
+      "Light Jogging",
+      "Cycling",
+      "Swimming",
+      "Elliptical"
+    ],
+    "videos": [
+      {
+        "id": "v17",
+        "title": "Cardio Warm-up",
+        "duration": "5 min",
+        "focus": "Warm-up"
+      },
+      {
+        "id": "v18",
+        "title": "Heart-Healthy Walking",
+        "duration": "10 min",
+        "focus": "Cardiovascular"
+      },
+      {
+        "id": "v19",
+        "title": "Interval Jogging",
+        "duration": "8 min",
+        "focus": "Cardio Intervals"
+      },
+      {
+        "id": "v20",
+        "title": "Low-Impact Cycling",
+        "duration": "10 min",
+        "focus": "Endurance"
+      },
+      {
+        "id": "v21",
+        "title": "Cool Down",
+        "duration": "2 min",
+        "focus": "Recovery"
+      }
     ]
   }
 ]

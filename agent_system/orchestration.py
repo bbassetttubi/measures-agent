@@ -69,30 +69,30 @@ class Orchestrator:
         return hashlib.md5(key_str.encode()).hexdigest()
     
     def _get_from_response_cache(self, cache_key: str) -> tuple:
-        """Get response from cache if valid. Returns (response, session_id, hit) tuple."""
+        """Get response from cache if valid. Returns (response, session_id, widgets, hit) tuple."""
         with self._response_cache_lock:
             if cache_key in self._response_cache:
-                response, session_id, timestamp = self._response_cache[cache_key]
+                response, session_id, widgets, timestamp = self._response_cache[cache_key]
                 age = time.time() - timestamp
                 if age < self._response_cache_ttl:
-                    return response, session_id, True
+                    return response, session_id, widgets, True
                 else:
                     # Expired, remove it
                     del self._response_cache[cache_key]
-        return None, None, False
+        return None, None, None, False
     
-    def _put_in_response_cache(self, cache_key: str, response: str, session_id: str):
-        """Store response in cache with current timestamp."""
+    def _put_in_response_cache(self, cache_key: str, response: str, session_id: str, widgets: list):
+        """Store response and widgets in cache with current timestamp."""
         with self._response_cache_lock:
-            self._response_cache[cache_key] = (response, session_id, time.time())
+            self._response_cache[cache_key] = (response, session_id, widgets, time.time())
             # Cleanup old entries (keep cache size manageable)
             if len(self._response_cache) > 1000:
                 # Remove oldest 20%
-                sorted_items = sorted(self._response_cache.items(), key=lambda x: x[1][2])
+                sorted_items = sorted(self._response_cache.items(), key=lambda x: x[1][3])
                 for key, _ in sorted_items[:200]:
                     del self._response_cache[key]
     
-    def run_mesh(self, user_input: str, session_id: str = None) -> tuple[str, str]:
+    def run_mesh(self, user_input: str, session_id: str = None) -> tuple[str, str, list]:
         """
         Run the agent mesh with conversation memory and response caching.
         
@@ -101,7 +101,7 @@ class Orchestrator:
             session_id: Optional session ID for conversation continuity
             
         Returns:
-            tuple: (response text, session_id)
+            tuple: (response text, session_id, widgets)
         """
         total_start = time.time()
         print(f"\n>>> New Request: {user_input}")
@@ -118,18 +118,29 @@ class Orchestrator:
         
         # 2. Check for data updates and increment version if needed
         self._check_data_updates(context)
+        context.trace = [f"User input: {user_input}"]
         
         # 3. Check response cache (only for queries with existing session)
         if session_id:
             cache_key = self._get_response_cache_key(user_input, session_id, context.data_version)
-            cached_response, cached_session_id, hit = self._get_from_response_cache(cache_key)
+            cached_response, cached_session_id, cached_widgets, hit = self._get_from_response_cache(cache_key)
             if hit:
                 cache_time = time.time() - total_start
                 print(f"\n{'='*60}")
                 print(f"💾 RESPONSE CACHE HIT: Returning cached response (data v{context.data_version})")
+                if cached_widgets:
+                    print(f"📦 Returning {len(cached_widgets)} cached widget(s)")
                 print(f"⏱️  TOTAL EXECUTION TIME: {cache_time:.2f}s (instant!)")
                 print(f"{'='*60}\n")
-                return cached_response, cached_session_id
+                return cached_response, cached_session_id, cached_widgets or [], context.trace
+        
+        # Clear any widgets left over from a previous turn
+        context.pending_widgets.clear()
+        # Clear ephemeral widget flags from previous turns
+        if context.flags:
+            keys_to_clear = [k for k in context.flags if k.startswith("needs_")]
+            for k in keys_to_clear:
+                del context.flags[k]
         
         # 4. Update user intent if this is first message or a new topic
         if not context.user_intent or len(context.history) == 0:
@@ -211,13 +222,14 @@ class Orchestrator:
                             next_agent_names.append("Critic")
                 
                 parallel_time = time.time() - parallel_start
+                deduped_next = list(dict.fromkeys(next_agent_names))  # Preserves order
                 print(f"\n{'='*60}")
                 print(f"⚡ PARALLEL BATCH COMPLETE: {parallel_time:.2f}s")
-                print(f"   Next agents: {', '.join(next_agent_names)}")
+                print(f"   Next agents: {', '.join(deduped_next)}")
                 print(f"{'='*60}\n")
                 
                 # Deduplicate next agents (if multiple agents handoff to same agent)
-                current_agent_names = list(dict.fromkeys(next_agent_names))  # Preserves order
+                current_agent_names = deduped_next
         
         total_time = time.time() - total_start
         print(f"\n{'='*60}")
@@ -227,16 +239,24 @@ class Orchestrator:
         # 9. Save updated context to session
         self.session_manager.update_session(session_id, context)
             
-        # 10. Return Final Response and Session ID
+        # 10. Return Final Response, Session ID, and Widgets
         # The last message from the Critic (or whoever finished) should be the response.
         if context.history:
             last_msg = context.history[-1]
             final_response = last_msg.content
+            widgets = list(context.pending_widgets)
+            context.pending_widgets.clear()
             
-            # Cache the response for future identical queries (with current data version)
+            # Cache the response and widgets for future identical queries (with current data version)
             cache_key = self._get_response_cache_key(user_input, session_id, context.data_version)
-            self._put_in_response_cache(cache_key, final_response, session_id)
-            print(f"💾 Response cached for {self._response_cache_ttl}s (data v{context.data_version})\n")
+            self._put_in_response_cache(cache_key, final_response, session_id, widgets)
+            print(f"💾 Response + widgets cached for {self._response_cache_ttl}s (data v{context.data_version})\n")
             
-            return final_response, session_id
-        return "System Error: No response generated.", session_id
+            # Log widgets being returned
+            if widgets:
+                print(f"📦 Returning {len(widgets)} widget(s)")
+                for w in widgets:
+                    print(f"  - {w['type']}")
+            
+            return final_response, session_id, widgets, context.trace
+        return "System Error: No response generated.", session_id, [], context.trace

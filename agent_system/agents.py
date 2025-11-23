@@ -57,8 +57,11 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - "How can I sleep better?" → 'Sleep Doctor'
         
         When in doubt, route to the PRIMARY specialist who will coordinate others.
+        
+        IMPORTANT: You do NOT have access to widget or data tools. Your only job is to route.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=[]
     )
     
     # 2. Triage
@@ -125,7 +128,8 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         Do NOT try to solve the problem yourself - your job is smart routing and coordination.
         Always include context about the full request in your handoff.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=[]
     )
     
     # 3. Specialists
@@ -179,9 +183,14 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Parallel: When specialists can work independently with same data (default approach)
         - Sequential: Only when later specialist truly depends on earlier specialist's recommendations (rare)
         
-        Complete ALL biomarker analysis and document ALL findings BEFORE handing off.
+        NOTE ON RESOURCES:
+        - Do NOT call widget/resource tools directly. Focus on medical analysis and hand off to Nutritionist/Fitness Coach (and others) with clear findings.
+        - A downstream Widget Orchestrator agent will surface interactive widgets based on the findings you provide.
+        
+        Complete ALL biomarker analysis, document ALL findings, and THEN handoff to the relevant lifestyle specialists.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["get_biomarkers", "get_biomarker_ranges"]
     )
     
     agents["Nutritionist"] = Agent(
@@ -195,6 +204,7 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - If biomarker data (e.g., cholesterol levels, glucose, etc.) is ALREADY present in findings, use it directly
         - **ONLY** handoff to Physician if biomarker data is needed AND not already available
         - This prevents unnecessary circular handoffs when running in parallel with the Physician
+        - If the system flag `biomarkers_ready` is TRUE, the labs are already available—do NOT request them again.
         
         DATA GATHERING SEQUENCE:
         1. For medical nutrition queries (cholesterol, diabetes, blood pressure, etc.):
@@ -216,16 +226,25 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Practical meal ideas
         - Reference specific biomarker values when making recommendations
         
-        HANDOFF LOGIC (SIMPLIFIED):
-        - After providing complete nutrition recommendations, handoff directly to Critic
-        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
-        - Update finding: "COMPLETED: nutrition."
-        - Your job is to provide excellent nutrition advice, not to coordinate other specialists
-        - Handoff: "Critic"
+        NOTE ON RESOURCES:
+        - Do NOT call widget/resource tools. Focus on detailed nutrition guidance in text.
+        - The downstream Widget Orchestrator agent will choose and render interactive meal plans based on your recommendations.
         
-        Complete ALL data gathering and recommendation development BEFORE handing off.
+        **USER-FACING TEXT (CRITICAL):**
+        - Provide a complete, polished narrative explaining your recommendations
+        - **DO NOT include** internal coordination messages like "COMPLETED: nutrition" or "Handoff to Critic" in your text
+        - Keep your text professional and user-friendly
+        - End with something like "I've provided a meal plan to help you get started"
+        
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete nutrition recommendations AND generating widget, handoff directly to Critic
+        - Update finding parameter in transfer_handoff: "COMPLETED: nutrition."
+        - Your user-facing text and your handoff finding are SEPARATE - keep them clean
+        
+        Complete ALL data gathering, recommendations, and widget generation BEFORE handing off.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["get_user_profile", "get_food_journal", "get_activity_log"]
     )
     
     agents["Fitness Coach"] = Agent(
@@ -239,6 +258,7 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - If health context (e.g., cardiovascular risk, chronic conditions) is ALREADY present in findings, use it to inform your plan
         - **ONLY** handoff to Physician if medical clearance is needed AND not already addressed
         - This prevents unnecessary circular handoffs when running in parallel with other agents
+        - If the system flag `biomarkers_ready` is TRUE, assume the Physician has already provided necessary context.
         
         DATA GATHERING SEQUENCE:
         1. Check accumulated_findings for any medical context or health concerns
@@ -252,13 +272,6 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Weekly frequency (e.g., 3x per week)
         - Rest periods between sets
         - Progressive overload strategy (how to increase difficulty)
-        
-        HANDOFF LOGIC (SIMPLIFIED):
-        - After providing complete fitness plan, handoff directly to Critic
-        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
-        - Update finding: "COMPLETED: fitness."
-        - Your job is to provide excellent fitness guidance, not to coordinate other specialists
-        - Handoff: "Critic"
         - Form cues and safety considerations
         - Modifications for different fitness levels
         
@@ -267,15 +280,25 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - User's goals (from profile)
         - Any health limitations
         
-        DOMAIN COVERAGE CHECK:
-        - Check accumulated_findings for "REMAINING: [...]" domains
-        - If domains like [sleep], [nutrition], or [mental health] are in REMAINING list, handoff to appropriate specialist
-        - Update finding to mark fitness domain as addressed: "COMPLETED: fitness. REMAINING: [other domains]"
+        NOTE ON RESOURCES:
+        - Do NOT call widget/resource tools. Provide the full workout plan in text.
+        - The Widget Orchestrator agent will surface interactive workout widgets based on your guidance.
         
-        Complete ALL data gathering and plan development BEFORE handing off.
-        Only handoff to Critic when you have a complete plan AND all REMAINING domains are addressed or handed off.
+        **USER-FACING TEXT (CRITICAL):**
+        - Provide a complete, polished narrative explaining your fitness plan
+        - **DO NOT include** internal coordination messages like "COMPLETED: fitness" or "Handoff to Critic" in your text
+        - Keep your text professional and user-friendly
+        - End with something like "I've provided an interactive workout plan to get you started"
+        
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete fitness plan AND generating widget, handoff directly to Critic
+        - Update finding parameter in transfer_handoff: "COMPLETED: fitness."
+        - Your user-facing text and your handoff finding are SEPARATE - keep them clean
+        
+        Complete ALL data gathering, recommendations, and widget generation BEFORE handing off.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["get_user_profile", "get_activity_log", "get_workout_plan"]
     )
     
     agents["Sleep Doctor"] = Agent(
@@ -325,7 +348,8 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         
         Only handoff to Critic when you have complete recommendations AND all REMAINING domains are addressed or handed off.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["get_sleep_data", "search_knowledge_base"]
     )
     
     agents["Mindfulness Coach"] = Agent(
@@ -362,7 +386,8 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         
         If physical health issues are detected, handoff to appropriate specialist first.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["search_knowledge_base"]
     )
     
     agents["User Persona"] = Agent(
@@ -373,7 +398,8 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Use `get_user_profile` to retrieve age, weight, goals.
         - Ensure other agents' advice aligns with the user's goals.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        allowed_mcp_tools=["get_user_profile"]
     )
     
     # 4. Critic
@@ -416,6 +442,16 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         
         This transparency helps users understand severity and track progress.
         
+        BIOMARKER DATA GATHERING:
+        - Check if `biomarkers_ready` flag is set in context.
+        - If NOT set, call `get_biomarkers({})` to ensure comprehensive health assessment and enable widget selection.
+        - This ensures widgets are personalized to the user's actual health data, not just general recommendations.
+        
+        WIDGET & RESOURCE GUIDANCE:
+        - FIRST, deliver the complete narrative answer (biomarker values + ranges, diet, fitness, supplement advice).
+        - AFTER your narrative is complete, the system will automatically attach relevant widgets based on health flags.
+        - Make sure your closing paragraphs explain how the user should leverage the meal/workout/supplement resources.
+        
         LOOP PREVENTION:
         - Check accumulated_findings for "HOLISTIC ASSESSMENT" or "MULTI-DOMAIN REQUEST"
         - If present, verify all domains have been addressed
@@ -424,10 +460,13 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - If you've already received input from Triage Agent, synthesize what you have
         - Trust that specialists have coordinated properly
         
-        When you are done synthesizing, output the final response text.
-        This is the last step - make it excellent.
+        When you are done synthesizing, output the final response text and finish.
+        Make it excellent.
         """,
-        mcp_client=mcp_client
+        mcp_client=mcp_client,
+        enable_widget_tools=True,
+        allowed_mcp_tools=["get_biomarkers", "get_biomarker_ranges"],
+        default_next_agents=["STOP"]
     )
     
     return agents

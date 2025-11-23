@@ -24,7 +24,7 @@ def main():
             if user_input.lower() in ["exit", "quit"]:
                 break
                 
-            response = orchestrator.run_mesh(user_input)
+            response, _, _, _ = orchestrator.run_mesh(user_input)
             
             print(f"\nAgent: {response}")
             

@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 from typing import List, Optional
 import data_loader
 import logging
+from datetime import datetime
 
 # Suppress verbose MCP logging
 logging.basicConfig(level=logging.WARNING)
@@ -64,3 +65,4 @@ def search_knowledge_base(query: str) -> str:
 
 if __name__ == "__main__":
     mcp.run()
+

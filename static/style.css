@@ -427,3 +427,198 @@ body {
         max-width: 90%;
     }
 }
+
+/* Widget Styles */
+.chat-widget {
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.widget-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.widget-status {
+    padding: 8px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.widget-status-icon {
+    font-size: 14px;
+}
+
+.widget-header {
+    padding: 16px;
+}
+
+.widget-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.widget-caption {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.widget-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+.widget-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.widget-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0;
+}
+
+.widget-list {
+    padding: 8px;
+}
+
+.widget-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: background 0.2s;
+}
+
+.widget-list-item:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.widget-list-item:last-child {
+    margin-bottom: 0;
+}
+
+.widget-icon {
+    font-size: 20px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 6px;
+}
+
+.widget-badge {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.widget-badge-breakfast {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.widget-badge-lunch {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.widget-badge-dinner {
+    background: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+}
+
+.widget-badge-snack {
+    background: rgba(244, 114, 182, 0.2);
+    color: #f472b6;
+}
+
+.widget-item-content {
+    flex: 1;
+}
+
+.widget-item-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.widget-item-caption {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.widget-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.widget-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.widget-btn-primary {
+    background: var(--accent-gradient);
+    color: white;
+}
+
+.widget-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.widget-btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.widget-btn-outline:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent-primary);
+}
+
+.widget-btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.widget-footer {
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+}
+
+.widget-footer .widget-btn {
+    flex: 1;
+}

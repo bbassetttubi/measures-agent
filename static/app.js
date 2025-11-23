@@ -7,11 +7,13 @@ const agentStatus = document.getElementById('agentStatus');
 let isProcessing = false;
 let currentMessageElement = null;
 let currentSessionId = localStorage.getItem('session_id') || null;
+let renderedWidgets = new Set();  // Track which widgets we've already rendered to prevent duplicates
 
 // Function to start a new conversation
 function startNewConversation() {
     currentSessionId = null;
     localStorage.removeItem('session_id');
+    renderedWidgets.clear();  // Clear widget tracking for new conversation
     chatContainer.innerHTML = `
         <div class="welcome-message">
             <div class="welcome-icon">👋</div>
@@ -64,6 +66,145 @@ function addMessage(content, isUser = false) {
 
     scrollToBottom();
     return messageContent;
+}
+
+// Add widget to last message
+function addWidget(widgetType, widgetData) {
+    // Create unique widget ID to prevent duplicates
+    const widgetId = `${widgetType}:${JSON.stringify(widgetData)}`;
+    
+    // Check if we've already rendered this exact widget
+    if (renderedWidgets.has(widgetId)) {
+        console.log('Skipping duplicate widget:', widgetType);
+        return;
+    }
+    
+    // Mark as rendered
+    renderedWidgets.add(widgetId);
+    
+    // Find the last assistant message or create one if needed
+    let lastMessage = chatContainer.querySelector('.message.assistant:last-child .message-content');
+    
+    if (!lastMessage) {
+        lastMessage = addMessage('');
+    }
+    
+    // Create widget container
+    const widgetDiv = document.createElement('div');
+    widgetDiv.className = 'chat-widget';
+    
+    // Render widget based on type
+    if (widgetType === 'Workout plan') {
+        widgetDiv.innerHTML = renderWorkoutWidget(widgetData);
+    } else if (widgetType === 'Meal plan: watch & order') {
+        widgetDiv.innerHTML = renderMealPlanWidget(widgetData);
+    } else if (widgetType === 'Supplements — Thorne') {
+        widgetDiv.innerHTML = renderSupplementWidget(widgetData);
+    } else {
+        // Generic widget rendering
+        widgetDiv.innerHTML = `<pre>${JSON.stringify(widgetData, null, 2)}</pre>`;
+    }
+    
+    lastMessage.appendChild(widgetDiv);
+    scrollToBottom();
+}
+
+// Render workout plan widget
+function renderWorkoutWidget(data) {
+    const videos = data.videos.map(video => `
+        <div class="widget-list-item">
+            <div class="widget-icon">▶️</div>
+            <div class="widget-item-content">
+                <div class="widget-item-title">${video.title}</div>
+                <div class="widget-item-caption">${video.duration} • ${video.focus}</div>
+            </div>
+            <button class="widget-btn widget-btn-outline" onclick="alert('Video player coming soon!')">Watch</button>
+        </div>
+    `).join('');
+    
+    return `
+        <div class="widget-card">
+            <div class="widget-header">
+                <div class="widget-caption">${data.level} • ${data.duration}</div>
+                <div class="widget-title">${data.title}</div>
+                <div class="widget-description">${data.description}</div>
+            </div>
+            <div class="widget-divider"></div>
+            <div class="widget-list">
+                ${videos}
+            </div>
+            <div class="widget-divider"></div>
+            <div class="widget-footer">
+                <button class="widget-btn widget-btn-primary" onclick="alert('Starting plan...')">Start plan</button>
+                <button class="widget-btn widget-btn-outline" onclick="alert('Shuffling exercises...')">Swap moves</button>
+            </div>
+        </div>
+    `;
+}
+
+// Render meal plan widget
+function renderMealPlanWidget(data) {
+    const meals = data.meals.map(meal => `
+        <div class="widget-list-item">
+            <div class="widget-badge widget-badge-${meal.mealType.toLowerCase()}">${meal.mealType}</div>
+            <div class="widget-item-content">
+                <div class="widget-item-title">${meal.title}</div>
+            </div>
+            <div class="widget-actions">
+                <button class="widget-btn widget-btn-sm widget-btn-outline" onclick="window.open('${meal.videoUrl}', '_blank')">
+                    ▶️ Watch
+                </button>
+                <button class="widget-btn widget-btn-sm widget-btn-primary" onclick="window.open('${meal.instacartUrl}', '_blank')">
+                    🛒 Order
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    return `
+        <div class="widget-card">
+            <div class="widget-header">
+                <div class="widget-title">${data.title}</div>
+                <div class="widget-caption">${data.dateLabel}</div>
+            </div>
+            <div class="widget-divider"></div>
+            <div class="widget-list">
+                ${meals}
+            </div>
+        </div>
+    `;
+}
+
+// Render supplement widget
+function renderSupplementWidget(data) {
+    const items = data.items.map(item => `
+        <div class="widget-list-item">
+            <div class="widget-item-content">
+                <div class="widget-item-title">${item.name}</div>
+                <div class="widget-item-caption">${item.tagline}</div>
+            </div>
+            <button class="widget-btn widget-btn-sm widget-btn-outline" onclick="window.open('${item.buyUrl}', '_blank')">
+                Buy on Thorne →
+            </button>
+        </div>
+    `).join('');
+    
+    return `
+        <div class="widget-card">
+            <div class="widget-status">
+                <span class="widget-status-icon">🔗</span>
+                <span class="widget-status-text">Thorne purchase links</span>
+            </div>
+            <div class="widget-header">
+                <div class="widget-title">${data.title}</div>
+                <div class="widget-note">${data.note}</div>
+            </div>
+            <div class="widget-divider"></div>
+            <div class="widget-list">
+                ${items}
+            </div>
+        </div>
+    `;
 }
 
 // Format message with markdown-like formatting
@@ -169,6 +310,9 @@ chatForm.addEventListener('submit', async (e) => {
 
     // Add user message
     addMessage(userMessage, true);
+    
+    // Clear rendered widgets for new query
+    renderedWidgets.clear();
 
     // Disable input
     isProcessing = true;
@@ -217,6 +361,10 @@ chatForm.addEventListener('submit', async (e) => {
                         updateAgentStatus(data.name);
                         removeTypingIndicator();
                         addTypingIndicator(data.name);
+                    } else if (data.type === 'widget') {
+                        // Render widget
+                        removeTypingIndicator();
+                        addWidget(data.widget, data.data);
                     } else if (data.type === 'stream') {
                         removeTypingIndicator();
                         if (!currentMessageElement) {
@@ -241,6 +389,8 @@ chatForm.addEventListener('submit', async (e) => {
                             currentSessionId = data.session_id;
                             localStorage.setItem('session_id', data.session_id);
                         }
+                    } else if (data.type === 'trace') {
+                        console.debug('Agent trace:', data.entries);
                     } else if (data.type === 'done') {
                         updateAgentStatus(null);
                         isProcessing = false;

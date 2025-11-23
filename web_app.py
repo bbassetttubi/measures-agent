@@ -67,8 +67,8 @@ def chat():
                 sys.stdout = QueueWriter()
                 
                 try:
-                    response, new_session_id = get_orchestrator().run_mesh(user_message, session_id)
-                    output_queue.put(('final', {'response': response, 'session_id': new_session_id}))
+                    response, new_session_id, widgets, trace = get_orchestrator().run_mesh(user_message, session_id)
+                    output_queue.put(('final', {'response': response, 'session_id': new_session_id, 'widgets': widgets, 'trace': trace}))
                 except Exception as e:
                     output_queue.put(('error', str(e)))
                 finally:
@@ -106,7 +106,7 @@ def chat():
                             yield f"data: {json.dumps({'type': 'stream', 'content': text})}\n\n"
                 
                 elif msg_type == 'final':
-                    # Send final response if we didn't stream it
+                    # Send final response first (ensures narrative precedes widgets)
                     response_text = content['response'] if isinstance(content, dict) else content
                     new_session_id = content['session_id'] if isinstance(content, dict) else None
                     
@@ -114,6 +114,14 @@ def chat():
                         yield f"data: {json.dumps({'type': 'final', 'content': response_text, 'session_id': new_session_id})}\n\n"
                     else:
                         yield f"data: {json.dumps({'type': 'session', 'session_id': new_session_id})}\n\n"
+                    
+                    # Stream widgets after text
+                    if isinstance(content, dict) and 'widgets' in content:
+                        for widget in content['widgets']:
+                            yield f"data: {json.dumps({'type': 'widget', 'widget': widget['type'], 'data': widget['data']})}\n\n"
+                    if isinstance(content, dict) and 'trace' in content:
+                        yield f"data: {json.dumps({'type': 'trace', 'entries': content['trace']})}\n\n"
+                    
                     yield f"data: {json.dumps({'type': 'done'})}\n\n"
                     break
                 
