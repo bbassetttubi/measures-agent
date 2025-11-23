@@ -3,6 +3,8 @@ from .agents import create_agents
 from .mcp_client import SimpleMCPClient
 from .session_manager import SessionManager
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class Orchestrator:
     def __init__(self):
@@ -45,7 +47,7 @@ class Orchestrator:
         context.hop_count = 0
         
         # 5. Start with Guardrail
-        current_agent_name = "Guardrail"
+        current_agent_names = ["Guardrail"]
         
         # 6. Mesh Loop with loop detection
         agent_sequence = []  # Track which agents have been called
@@ -53,30 +55,74 @@ class Orchestrator:
         while context.hop_count < 15:
             context.hop_count += 1
             
-            if current_agent_name == "STOP":
+            # Check for STOP condition
+            if "STOP" in current_agent_names:
                 break
-                
-            if current_agent_name not in self.agents:
-                print(f"Error: Agent {current_agent_name} not found. Defaulting to Critic.")
-                current_agent_name = "Critic"
+            
+            # Filter out invalid agents
+            valid_agents = []
+            for agent_name in current_agent_names:
+                if agent_name not in self.agents:
+                    print(f"Error: Agent {agent_name} not found. Defaulting to Critic.")
+                    valid_agents.append("Critic")
+                else:
+                    valid_agents.append(agent_name)
+            
+            current_agent_names = valid_agents
             
             # Loop Detection: Check if Triage Agent is being called repeatedly
-            agent_sequence.append(current_agent_name)
-            if len(agent_sequence) >= 3:
-                # Check for Triage → Critic → Triage → Critic pattern
-                last_three = agent_sequence[-3:]
-                if current_agent_name == "Triage Agent" and agent_sequence.count("Triage Agent") >= 3:
-                    print(f"⚠️  WARNING: Triage Agent called {agent_sequence.count('Triage Agent')} times. Forcing handoff to Critic to prevent loop.")
-                    context.add_finding("[SYSTEM]: Loop prevention activated - routing directly to Critic for final synthesis")
-                    current_agent_name = "Critic"
+            for agent_name in current_agent_names:
+                agent_sequence.append(agent_name)
             
-            agent = self.agents[current_agent_name]
+            if agent_sequence.count("Triage Agent") >= 3:
+                print(f"⚠️  WARNING: Triage Agent called {agent_sequence.count('Triage Agent')} times. Forcing handoff to Critic to prevent loop.")
+                context.add_finding("[SYSTEM]: Loop prevention activated - routing directly to Critic for final synthesis")
+                current_agent_names = ["Critic"]
             
-            # Run Agent
-            next_agent_name = agent.run(context)
-            
-            # Transition
-            current_agent_name = next_agent_name
+            # Execute agents in parallel or sequentially based on count
+            if len(current_agent_names) == 1:
+                # Single agent - execute directly
+                agent = self.agents[current_agent_names[0]]
+                next_agent_names = agent.run(context)
+                current_agent_names = next_agent_names
+            else:
+                # Multiple agents - execute in parallel
+                print(f"\n{'='*60}")
+                print(f"⚡ PARALLEL EXECUTION: {len(current_agent_names)} agents running concurrently")
+                print(f"   Agents: {', '.join(current_agent_names)}")
+                print(f"{'='*60}")
+                
+                parallel_start = time.time()
+                next_agent_names = []
+                
+                # Use ThreadPoolExecutor for parallel execution
+                with ThreadPoolExecutor(max_workers=len(current_agent_names)) as executor:
+                    # Submit all agents for parallel execution
+                    future_to_agent = {
+                        executor.submit(self.agents[agent_name].run, context): agent_name 
+                        for agent_name in current_agent_names
+                    }
+                    
+                    # Collect results as they complete
+                    for future in as_completed(future_to_agent):
+                        agent_name = future_to_agent[future]
+                        try:
+                            result = future.result()
+                            next_agent_names.extend(result)
+                        except Exception as e:
+                            print(f"  ❌ Error in {agent_name}: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            next_agent_names.append("Critic")
+                
+                parallel_time = time.time() - parallel_start
+                print(f"\n{'='*60}")
+                print(f"⚡ PARALLEL BATCH COMPLETE: {parallel_time:.2f}s")
+                print(f"   Next agents: {', '.join(next_agent_names)}")
+                print(f"{'='*60}\n")
+                
+                # Deduplicate next agents (if multiple agents handoff to same agent)
+                current_agent_names = list(dict.fromkeys(next_agent_names))  # Preserves order
         
         total_time = time.time() - total_start
         print(f"\n{'='*60}")

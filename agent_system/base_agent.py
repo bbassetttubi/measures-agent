@@ -54,11 +54,11 @@ class Agent:
             "function_declarations": [
                 {
                     "name": "transfer_handoff",
-                    "description": "Transfers control to another agent.",
+                    "description": "Transfers control to one or more agents. For concurrent execution, specify multiple target agents as a comma-separated string (e.g., 'Physician,Nutritionist,Fitness Coach'). All specified agents will execute in parallel.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
-                            "target_agent": {"type": "STRING", "description": "Name of the agent to transfer to."},
+                            "target_agent": {"type": "STRING", "description": "Name(s) of the agent(s) to transfer to. For multiple agents, use comma-separated values: 'Agent1,Agent2,Agent3'"},
                             "reason": {"type": "STRING", "description": "Reason for the transfer."},
                             "new_finding": {"type": "STRING", "description": "Optional finding to add to context."}
                         },
@@ -68,9 +68,9 @@ class Agent:
             ]
         }
 
-    def run(self, context: AgentContext) -> str:
+    def run(self, context: AgentContext) -> List[str]:
         """
-        Runs the agent. Returns the name of the next agent (handoff) or 'STOP' if finished (Critic).
+        Runs the agent. Returns a list of agent names to execute next (for parallel execution) or ['STOP'] if finished (Critic).
         """
         agent_start = time.time()
         print(f"\n--- Agent Active: {self.name} ---")
@@ -131,7 +131,7 @@ class Agent:
         final_response = chunks[-1] if chunks else None
         
         if not final_response:
-            return "Critic"  # Fallback
+            return ["Critic"]  # Fallback
         
         # 5. Handle Tool Calls Loop
         # Gemini SDK handles the loop if we use automatic function calling, but we want to intercept 'transfer_handoff'.
@@ -153,10 +153,18 @@ class Agent:
                     if "new_finding" in args and args["new_finding"]:
                         context.add_finding(f"[{self.name}]: {args['new_finding']}")
                     
-                    context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
+                    # Parse target agents (can be comma-separated for parallel execution)
+                    target_agents = [agent.strip() for agent in target.split(",")]
+                    
+                    if len(target_agents) > 1:
+                        context.add_message("model", f"Handing off to {', '.join(target_agents)} (parallel): {reason}", sender=self.name)
+                        print(f"  🔀 Parallel Handoff to: {', '.join(target_agents)}")
+                    else:
+                        context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
+                    
                     agent_total = time.time() - agent_start
                     print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
-                    return target
+                    return target_agents
                 else:
                     # Collect MCP tool call for parallel execution
                     mcp_tool_calls.append((tool_name, args))
@@ -256,7 +264,7 @@ class Agent:
                 # Return error to allow agent to continue
                 agent_total = time.time() - agent_start
                 print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
-                return "Critic"
+                return ["Critic"]
                     
         # If text response (already streamed above)
         if full_text:
@@ -264,12 +272,12 @@ class Agent:
             agent_total = time.time() - agent_start
             print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
             if self.name == "Critic":
-                return "STOP"
+                return ["STOP"]
             # If a normal agent just talks without handing off, we might default to Critic or ask it to handoff.
             # For now, let's assume it means it's done or needs user input.
             # But in a mesh, it SHOULD handoff.
             # We'll force a handoff to Critic if it didn't specify.
-            return "Critic"
+            return ["Critic"]
 
     def _process_response(self, response, context, chat):
         """Helper to handle the response loop recursively with parallel tool execution."""
@@ -287,8 +295,17 @@ class Agent:
                     reason = args["reason"]
                     if "new_finding" in args and args["new_finding"]:
                         context.add_finding(f"[{self.name}]: {args['new_finding']}")
-                    context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
-                    return target
+                    
+                    # Parse target agents (can be comma-separated for parallel execution)
+                    target_agents = [agent.strip() for agent in target.split(",")]
+                    
+                    if len(target_agents) > 1:
+                        context.add_message("model", f"Handing off to {', '.join(target_agents)} (parallel): {reason}", sender=self.name)
+                        print(f"  🔀 Parallel Handoff to: {', '.join(target_agents)}")
+                    else:
+                        context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
+                    
+                    return target_agents
                 else:
                     # Collect MCP tool calls for parallel execution
                     mcp_tool_calls.append((tool_name, args))
@@ -357,5 +374,5 @@ class Agent:
             print(f"  > Response: {response.text[:100]}...")
             context.add_message("model", response.text, sender=self.name)
             if self.name == "Critic":
-                return "STOP"
-            return "Critic"
+                return ["STOP"]
+            return ["Critic"]

@@ -33,22 +33,30 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         Note: A query like "What are my biggest health issues?" is a MEDICAL assessment query 
         that should go directly to Physician. The Physician will consult other specialists as needed.
         
-        Step 3: Route DIRECTLY to specialist if query is CLEARLY single-domain:
+        Step 3: Route DIRECTLY to PRIMARY specialist if query is CLEARLY single-domain OR has a clear primary:
         - Medical/biomarker/health issue/blood work → 'Physician'
-        - Diet/nutrition/food/cholesterol/eating → 'Nutritionist'
+        - Diet/nutrition/food/eating → 'Nutritionist'
         - Workout/exercise/fitness/training → 'Fitness Coach'
         - Meditation/stress/mindfulness/anxiety → 'Mindfulness Coach'
         - Sleep/insomnia/rest → 'Sleep Doctor'
         - User profile/goals/preferences → 'User Persona'
         
-        Examples of single-domain (route directly):
-        - "What are my cholesterol levels?" → Physician
-        - "How can I lower my cholesterol through diet?" → Nutritionist
-        - "Give me a workout for building muscle" → Fitness Coach
-        - "What meditation helps with stress?" → Mindfulness Coach
-        - "How can I sleep better?" → Sleep Doctor
+        **CRITICAL - AVOID PREMATURE PARALLEL ROUTING:**
+        - DO NOT route to multiple agents in parallel if they have dependencies
+        - Example: "How do I lower my cholesterol?" needs biomarker data FIRST
+          * CORRECT: Route to 'Physician' (who will then handoff to 'Nutritionist,Fitness Coach' in parallel)
+          * WRONG: Route to 'Physician,Nutritionist' (Nutritionist doesn't have data yet)
+        - Let the PRIMARY agent determine which specialists to involve in parallel
+        - ONLY use parallel routing from Guardrail if agents are truly independent
         
-        When in doubt, use Triage Agent to ensure nothing is missed.
+        Examples of correct routing:
+        - "What are my cholesterol levels?" → 'Physician'
+        - "How do I lower my cholesterol?" → 'Physician' (not Physician,Nutritionist)
+        - "Give me a workout for building muscle" → 'Fitness Coach'
+        - "What meditation helps with stress?" → 'Mindfulness Coach'
+        - "How can I sleep better?" → 'Sleep Doctor'
+        
+        When in doubt, route to the PRIMARY specialist who will coordinate others.
         """,
         mcp_client=mcp_client
     )
@@ -75,8 +83,10 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         For MULTI-DOMAIN queries (e.g., "lose weight AND sleep better"):
         - CRITICAL: List ALL domains mentioned in the 'new_finding' parameter
         - Format: "MULTI-DOMAIN REQUEST: [domain1, domain2, domain3]. Primary: [domain1]. REMAINING: [domain2, domain3]"
-        - Start with the MOST CRITICAL domain
-        - The specialist MUST check the REMAINING domains list and ensure all are addressed
+        - **CONSIDER PARALLEL ROUTING**: If domains are independent, handoff to multiple specialists at once
+          using comma-separated format (e.g., "Nutritionist,Fitness Coach,Sleep Doctor")
+        - Use sequential routing ONLY when later domains depend on results from earlier ones
+          (e.g., Physician must assess first, then Nutritionist can use the biomarker data)
         - Each specialist should update the finding with remaining domains before handing off
         
         PRIORITY ORDER (use for multi-domain queries):
@@ -90,7 +100,9 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - If user asks for "overall health", "get healthier", "comprehensive assessment", etc.
         - Use finding format: "HOLISTIC ASSESSMENT - ALL DOMAINS: [medical, nutrition, fitness, sleep, mental health]"
         - This tells specialists AND Critic that comprehensive coverage is expected
-        - Handoff to Physician FIRST for medical baseline
+        - Handoff to Physician FIRST for medical baseline (they need biomarker data)
+        - **AFTER PHYSICIAN**: Use parallel handoffs for remaining independent domains
+          e.g., "Nutritionist,Fitness Coach,Sleep Doctor,Mindfulness Coach" can all work simultaneously
         - DO NOT hand to Triage Agent again - let specialists coordinate
         
         Examples:
@@ -144,14 +156,30 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Include ALL abnormal values with their reference ranges in your findings
         
         COLLABORATION & DOMAIN COVERAGE:
+        - After completing biomarker analysis, identify which specialists are needed
         - Check accumulated_findings for "REMAINING: [...]" domains that need coverage
-        - Handoff to Nutritionist for dietary interventions
-        - Handoff to Fitness Coach for exercise recommendations
-        - If REMAINING domains list exists, ensure the next specialist can address them
-        - Update the finding to remove domains you've addressed from REMAINING list
         
-        Complete ALL biomarker analysis BEFORE handing off.
-        Ensure you've identified all significant health issues before moving to next agent.
+        **SMART PARALLEL HANDOFFS** (critical for performance):
+        - For health issues requiring multiple interventions (nutrition, fitness, sleep, etc.):
+          * Determine ALL specialists needed based on the health issues identified
+          * Handoff to ALL of them at once using comma-separated format
+          * They can work concurrently on the same biomarker data
+          * **DO NOT use REMAINING domains** - handoff to everyone needed in one go
+        
+        - Examples of complete parallel handoffs:
+          * Cardiovascular issues only: "Nutritionist,Fitness Coach"
+          * Comprehensive health assessment: "Nutritionist,Fitness Coach,Sleep Doctor,Mindfulness Coach"
+          * Metabolic + stress: "Nutritionist,Fitness Coach,Mindfulness Coach"
+        
+        - **CRITICAL**: Include ALL relevant findings in your handoff so specialists have complete context
+        - Format findings: "Physician Findings: [all biomarker details with values and ranges]"
+        - **DO NOT include "REMAINING:" in your finding** - you're handing off to all needed specialists at once
+        
+        **WHEN TO USE SEQUENTIAL vs PARALLEL:**
+        - Parallel: When specialists can work independently with same data (default approach)
+        - Sequential: Only when later specialist truly depends on earlier specialist's recommendations (rare)
+        
+        Complete ALL biomarker analysis and document ALL findings BEFORE handing off.
         """,
         mcp_client=mcp_client
     )
@@ -162,11 +190,18 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         system_instruction="""
         You are a Nutritionist and Dietitian.
         
-        ALWAYS FOLLOW THIS DATA GATHERING SEQUENCE:
+        CRITICAL - AVOID CIRCULAR HANDOFFS:
+        - **FIRST**, check accumulated_findings for biomarker data from the Physician
+        - If biomarker data (e.g., cholesterol levels, glucose, etc.) is ALREADY present in findings, use it directly
+        - **ONLY** handoff to Physician if biomarker data is needed AND not already available
+        - This prevents unnecessary circular handoffs when running in parallel with the Physician
+        
+        DATA GATHERING SEQUENCE:
         1. For medical nutrition queries (cholesterol, diabetes, blood pressure, etc.):
-           - FIRST handoff to Physician to get relevant biomarker data
-           - THEN analyze dietary needs based on medical findings
-           - Finally check `get_food_journal` if you need to see current eating habits
+           a. Check accumulated_findings for existing biomarker data
+           b. If biomarker data is present → proceed directly to dietary recommendations
+           c. If biomarker data is NOT present → handoff to Physician first
+           d. Check `get_food_journal` if you need current eating habits
         
         2. For general nutrition queries (meal planning, healthy eating):
            - Check `get_food_journal` to see current habits
@@ -179,14 +214,16 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Portion guidance and meal timing
         - Macronutrient targets when relevant
         - Practical meal ideas
+        - Reference specific biomarker values when making recommendations
         
-        DOMAIN COVERAGE CHECK:
-        - Check accumulated_findings for "REMAINING: [...]" domains
-        - If domains like [fitness], [sleep], or [mental health] are in REMAINING list, handoff to appropriate specialist
-        - Update finding to mark nutrition domain as addressed: "COMPLETED: nutrition. REMAINING: [other domains]"
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete nutrition recommendations, handoff directly to Critic
+        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
+        - Update finding: "COMPLETED: nutrition."
+        - Your job is to provide excellent nutrition advice, not to coordinate other specialists
+        - Handoff: "Critic"
         
         Complete ALL data gathering and recommendation development BEFORE handing off.
-        Only handoff to Critic when you have a complete plan AND all REMAINING domains are addressed or handed off.
         """,
         mcp_client=mcp_client
     )
@@ -197,17 +234,31 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         system_instruction="""
         You are a Fitness Coach and Personal Trainer.
         
-        ALWAYS FOLLOW THIS DATA GATHERING SEQUENCE:
-        1. Use `get_user_profile` to check age, weight, fitness goals, and preferences
-        2. Use `get_activity_log` with recent dates to see current fitness level and activity patterns
-        3. Use `get_workout_plan` with appropriate goal: "Hypertrophy" (muscle building), "Cardio" (endurance), or "All" (Yoga/Flexibility)
-        4. If user has health concerns, consider consulting Physician for medical clearance
+        CRITICAL - AVOID CIRCULAR HANDOFFS:
+        - **FIRST**, check accumulated_findings for medical/biomarker data from the Physician
+        - If health context (e.g., cardiovascular risk, chronic conditions) is ALREADY present in findings, use it to inform your plan
+        - **ONLY** handoff to Physician if medical clearance is needed AND not already addressed
+        - This prevents unnecessary circular handoffs when running in parallel with other agents
+        
+        DATA GATHERING SEQUENCE:
+        1. Check accumulated_findings for any medical context or health concerns
+        2. Use `get_user_profile` to check age, weight, fitness goals, and preferences
+        3. Use `get_activity_log` with recent dates to see current fitness level and activity patterns
+        4. Use `get_workout_plan` with appropriate goal: "Hypertrophy" (muscle building), "Cardio" (endurance), or "All" (Yoga/Flexibility)
+        5. Adapt plan based on any health concerns found in findings or profile
         
         PROVIDE COMPLETE WORKOUT PLANS including:
         - Specific exercises with sets x reps
         - Weekly frequency (e.g., 3x per week)
         - Rest periods between sets
         - Progressive overload strategy (how to increase difficulty)
+        
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete fitness plan, handoff directly to Critic
+        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
+        - Update finding: "COMPLETED: fitness."
+        - Your job is to provide excellent fitness guidance, not to coordinate other specialists
+        - Handoff: "Critic"
         - Form cues and safety considerations
         - Modifications for different fitness levels
         
@@ -262,13 +313,14 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         
         Complete ALL data analysis and recommendation development BEFORE handing off to Critic.
         
-        DOMAIN COVERAGE CHECK:
-        - Check accumulated_findings for "REMAINING: [...]" domains
-        - If domains like [fitness], [nutrition], or [mental health] are in REMAINING list, handoff to appropriate specialist
-        - Update finding to mark sleep domain as addressed: "COMPLETED: sleep. REMAINING: [other domains]"
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete sleep recommendations, handoff directly to Critic
+        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
+        - Update finding: "COMPLETED: sleep."
+        - Your job is to provide excellent sleep guidance, not to coordinate other specialists
+        - Handoff: "Critic"
         
-        IMPORTANT: When you are completely done with your analysis and recommendations,
-        use transfer_handoff with target_agent='Critic' to hand control to the Critic agent.
+        Complete ALL analysis and recommendations BEFORE handing off.
         NEVER hand off to None or leave the target agent empty - always specify 'Critic' explicitly.
         
         Only handoff to Critic when you have complete recommendations AND all REMAINING domains are addressed or handed off.
@@ -299,13 +351,14 @@ def create_agents(mcp_client: SimpleMCPClient) -> dict:
         - Time availability
         - Specific challenges (anxiety, focus, etc.)
         
-        DOMAIN COVERAGE CHECK:
-        - Check accumulated_findings for "REMAINING: [...]" domains
-        - If domains like [sleep], [fitness], or [nutrition] are in REMAINING list, handoff to appropriate specialist
-        - Update finding to mark mental health/stress domain as addressed: "COMPLETED: mental health. REMAINING: [other domains]"
+        HANDOFF LOGIC (SIMPLIFIED):
+        - After providing complete mindfulness recommendations, handoff directly to Critic
+        - **DO NOT check for REMAINING domains** - the Physician handles routing to all needed specialists
+        - Update finding: "COMPLETED: mental health."
+        - Your job is to provide excellent mindfulness guidance, not to coordinate other specialists
+        - Handoff: "Critic"
         
         Complete ALL recommendation development BEFORE handing off.
-        Only handoff to Critic when you have complete guidance AND all REMAINING domains are addressed or handed off.
         
         If physical health issues are detected, handoff to appropriate specialist first.
         """,

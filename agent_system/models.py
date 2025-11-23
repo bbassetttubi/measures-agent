@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+import threading
 
 class Message(BaseModel):
     role: str
@@ -13,8 +14,17 @@ class AgentContext(BaseModel):
     history: List[Message] = Field(default_factory=list, description="The conversation history.")
     hop_count: int = Field(default=0, description="Counter to prevent infinite loops.")
     
+    class Config:
+        arbitrary_types_allowed = True
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._lock = threading.Lock()
+    
     def add_message(self, role: str, content: str, sender: str = None):
-        self.history.append(Message(role=role, content=content, sender=sender))
+        with self._lock:
+            self.history.append(Message(role=role, content=content, sender=sender))
 
     def add_finding(self, finding: str):
-        self.accumulated_findings.append(finding)
+        with self._lock:
+            self.accumulated_findings.append(finding)
