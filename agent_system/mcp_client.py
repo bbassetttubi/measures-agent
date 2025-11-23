@@ -40,6 +40,8 @@ import asyncio
 import threading
 import atexit
 from contextlib import AsyncExitStack
+import time
+import hashlib
 
 class SimpleMCPClient:
     def __init__(self):
@@ -51,6 +53,18 @@ class SimpleMCPClient:
         # Connection pooling - maintain persistent connections
         self._connections = {}  # server_name -> (read, write, session, loop)
         self._connection_lock = threading.Lock()
+        
+        # Tool Result Caching - for static reference data only
+        self._cache = {}  # cache_key -> (result, timestamp)
+        self._cache_lock = threading.Lock()
+        self._cache_ttl = 3600  # 1 hour for reference data
+        
+        # Define which tools return static data that can be cached
+        self._cacheable_tools = {
+            'get_biomarker_ranges',  # Reference ranges don't change
+            'get_workout_plan',      # Workout plans are static
+            'get_supplement_info',   # Supplement info is static
+        }
         
         # Register cleanup
         atexit.register(self._cleanup)
@@ -70,12 +84,46 @@ class SimpleMCPClient:
                 result = await session.call_tool(tool_name, arguments)
                 return result.content[0].text
 
+    def _get_cache_key(self, tool_name: str, arguments: dict) -> str:
+        """Generate a cache key from tool name and arguments."""
+        # Sort arguments for consistent hashing
+        args_str = json.dumps(arguments, sort_keys=True)
+        key_str = f"{tool_name}:{args_str}"
+        return hashlib.md5(key_str.encode()).hexdigest()
+    
+    def _get_from_cache(self, cache_key: str) -> tuple:
+        """Get result from cache if valid. Returns (result, hit) tuple."""
+        with self._cache_lock:
+            if cache_key in self._cache:
+                result, timestamp = self._cache[cache_key]
+                age = time.time() - timestamp
+                if age < self._cache_ttl:
+                    return result, True
+                else:
+                    # Expired, remove it
+                    del self._cache[cache_key]
+        return None, False
+    
+    def _put_in_cache(self, cache_key: str, result: str):
+        """Store result in cache with current timestamp."""
+        with self._cache_lock:
+            self._cache[cache_key] = (result, time.time())
+    
     def call_tool_sync(self, server: str, tool_name: str, arguments: dict) -> str:
         """
         Synchronous wrapper for async MCP tool calls.
         Uses event loop pooling (not connection pooling - MCP connections are stateful and complex).
+        Implements caching for static reference data.
         Log suppression handled in MCP server code.
         """
+        # Check cache for cacheable tools
+        if tool_name in self._cacheable_tools:
+            cache_key = self._get_cache_key(tool_name, arguments)
+            cached_result, hit = self._get_from_cache(cache_key)
+            if hit:
+                print(f"  💾 Cache HIT: {tool_name}")
+                return cached_result
+        
         script = self.user_data_script if server == "user_data" else self.resources_script
         server_name = server
         
@@ -106,6 +154,13 @@ class SimpleMCPClient:
         
         if error[0]:
             raise error[0]
+        
+        # Cache result if cacheable
+        if tool_name in self._cacheable_tools:
+            cache_key = self._get_cache_key(tool_name, arguments)
+            self._put_in_cache(cache_key, result[0])
+            print(f"  💾 Cache MISS: {tool_name} (cached for {self._cache_ttl}s)")
+        
         return result[0]
     
     def call_tools_sync_parallel(self, tool_requests: list) -> list:

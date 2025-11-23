@@ -7,9 +7,15 @@ from .mcp_client import SimpleMCPClient
 import os
 from dotenv import load_dotenv
 import time
+import hashlib
 
 load_dotenv()
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+
+# Model Instance Cache - shared across all agents
+# Caches model instances to avoid recreating them with identical configurations
+_model_cache = {}
+_model_cache_lock = __import__('threading').Lock()
 
 class Agent:
     def __init__(self, name: str, role: str, system_instruction: str, mcp_client: SimpleMCPClient):
@@ -68,6 +74,29 @@ class Agent:
             ]
         }
 
+    def _get_model_cache_key(self, system_prompt: str, tools: list) -> str:
+        """Generate cache key for model configuration."""
+        # For simplicity, use agent name as cache key since system prompts are per-agent
+        # and tools are the same for all instances of an agent
+        return f"{self.name}:{self.model_name}"
+    
+    def _get_cached_model(self, system_prompt: str, tools: list):
+        """Get or create a cached model instance."""
+        cache_key = self._get_model_cache_key(system_prompt, tools)
+        
+        with _model_cache_lock:
+            if cache_key in _model_cache:
+                return _model_cache[cache_key], True  # Cache hit
+            
+            # Create new model and cache it
+            model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=system_prompt,
+                tools=tools
+            )
+            _model_cache[cache_key] = model
+            return model, False  # Cache miss
+    
     def run(self, context: AgentContext) -> List[str]:
         """
         Runs the agent. Returns a list of agent names to execute next (for parallel execution) or ['STOP'] if finished (Critic).
@@ -80,12 +109,12 @@ class Agent:
         handoff_tool = self._get_handoff_tool()
         all_tools = mcp_tools + [handoff_tool]
         
-        # 2. Setup Model
-        model = genai.GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=self._build_system_prompt(context),
-            tools=all_tools
-        )
+        # 2. Setup Model with caching
+        system_prompt = self._build_system_prompt(context)
+        model, cache_hit = self._get_cached_model(system_prompt, all_tools)
+        
+        if not cache_hit:
+            print(f"  🔧 Model instance created and cached")
         
         # 3. Chat Session (Stateless for the agent, but we inject history)
         # We need to convert our Message model to Gemini history format
