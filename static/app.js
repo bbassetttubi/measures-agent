@@ -6,6 +6,9 @@ const agentStatus = document.getElementById('agentStatus');
 
 let isProcessing = false;
 let currentMessageElement = null;
+let currentMessageMarkdown = '';
+let currentAgentName = null;
+let hasStreamContent = false;
 let currentSessionId = localStorage.getItem('session_id') || null;
 let renderedWidgets = new Set();  // Track which widgets we've already rendered to prevent duplicates
 
@@ -58,7 +61,7 @@ function addMessage(content, isUser = false) {
 
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
-    messageContent.innerHTML = formatMessage(content);
+    messageContent.innerHTML = renderMarkdown(content);
 
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(messageContent);
@@ -207,18 +210,43 @@ function renderSupplementWidget(data) {
     `;
 }
 
-// Format message with markdown-like formatting
-function formatMessage(text) {
-    // Convert **bold** to <strong>
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+// Render markdown safely (fallback to basic formatting if marked isn't available)
+function renderMarkdown(text = '') {
+    if (window.marked) {
+        if (!renderMarkdown.initialized && marked.setOptions) {
+            marked.setOptions({ breaks: true, gfm: true });
+            renderMarkdown.initialized = true;
+        }
+        return marked.parse(text);
+    }
 
-    // Convert bullet points
-    text = text.replace(/^\*   /gm, '• ');
+    // Fallback: lightweight formatting
+    let formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\* /gm, '• ')
+        .replace(/\n/g, '<br>');
+    return formatted;
+}
+renderMarkdown.initialized = false;
 
-    // Convert line breaks
-    text = text.replace(/\n/g, '<br>');
+const agentStatusMessages = {
+    "Guardrail": "I'm reviewing your question...",
+    "Triage Agent": "I'm coordinating the right specialists...",
+    "Physician": "I'm reviewing your biomarkers...",
+    "Nutritionist": "I'm analyzing your nutrition data...",
+    "Fitness Coach": "I'm crafting your exercise recommendations...",
+    "Sleep Doctor": "I'm evaluating your sleep patterns...",
+    "Mindfulness Coach": "I'm preparing mindfulness guidance...",
+    "User Persona": "I'm checking your preferences...",
+    "Critic": "I'm assembling your complete plan...",
+    "default": "I'm analyzing your health data..."
+};
 
-    return text;
+function getAgentStatusMessage(agentName) {
+    if (!agentName || !agentStatusMessages[agentName]) {
+        return agentStatusMessages["default"];
+    }
+    return agentStatusMessages[agentName];
 }
 
 // Add typing indicator with optional agent name
@@ -234,7 +262,8 @@ function addTypingIndicator(agentName = null) {
     const typingContent = document.createElement('div');
     typingContent.className = 'message-content';
     
-    const agentLabel = agentName ? `<div class="agent-label">${agentName} is thinking...</div>` : '';
+    const agentLabelText = agentName ? getAgentStatusMessage(agentName) : agentStatusMessages["default"];
+    const agentLabel = `<div class="agent-label">${agentLabelText}</div>`;
     
     typingContent.innerHTML = `
         ${agentLabel}
@@ -257,7 +286,7 @@ function updateTypingIndicator(agentName) {
     if (indicator) {
         const content = indicator.querySelector('.message-content');
         if (content) {
-            const agentLabel = `<div class="agent-label">${agentName} is thinking...</div>`;
+            const agentLabel = `<div class="agent-label">${getAgentStatusMessage(agentName)}</div>`;
             const typingDots = `
                 <div class="typing-indicator">
                     <div class="typing-dot"></div>
@@ -284,7 +313,7 @@ function updateAgentStatus(agentName) {
     const statusDot = agentStatus.querySelector('.status-dot');
 
     if (agentName) {
-        statusText.textContent = `${agentName} is thinking...`;
+        statusText.textContent = getAgentStatusMessage(agentName);
         statusDot.style.background = 'var(--accent-primary)';
     } else {
         statusText.textContent = 'Ready';
@@ -307,6 +336,12 @@ chatForm.addEventListener('submit', async (e) => {
 
     const userMessage = messageInput.value.trim();
     messageInput.value = '';
+
+    // Reset streaming state for new response turn
+    currentMessageElement = null;
+    currentMessageMarkdown = '';
+    currentAgentName = null;
+    hasStreamContent = false;
 
     // Add user message
     addMessage(userMessage, true);
@@ -361,23 +396,43 @@ chatForm.addEventListener('submit', async (e) => {
                         updateAgentStatus(data.name);
                         removeTypingIndicator();
                         addTypingIndicator(data.name);
+                        // Start a fresh bubble for the next agent's text
+                        if (currentAgentName !== data.name) {
+                            currentMessageElement = null;
+                            currentMessageMarkdown = '';
+                            currentAgentName = data.name;
+                            hasStreamContent = false;
+                        }
                     } else if (data.type === 'widget') {
                         // Render widget
                         removeTypingIndicator();
                         addWidget(data.widget, data.data);
                     } else if (data.type === 'stream') {
                         removeTypingIndicator();
+                        hasStreamContent = true;
                         if (!currentMessageElement) {
+                            currentMessageMarkdown = '';
                             currentMessageElement = addMessage('');
                         }
-                        currentMessageElement.innerHTML += data.content;
+                        currentMessageMarkdown += data.content;
+                        currentMessageElement.innerHTML = renderMarkdown(currentMessageMarkdown);
                         scrollToBottom();
                     } else if (data.type === 'final') {
                         removeTypingIndicator();
-                        if (!currentMessageElement) {
-                            addMessage(data.content);
+                        if (data.content) {
+                            if (currentMessageElement && !hasStreamContent) {
+                                currentMessageMarkdown += data.content;
+                                currentMessageElement.innerHTML = renderMarkdown(currentMessageMarkdown);
+                            } else if (!currentMessageElement) {
+                                currentMessageMarkdown = data.content;
+                                addMessage(data.content);
+                            }
+                        } else if (!currentMessageElement && !hasStreamContent) {
+                            addMessage('');
                         }
                         currentMessageElement = null;
+                        currentMessageMarkdown = '';
+                        hasStreamContent = false;
                         // Store session ID if provided
                         if (data.session_id) {
                             currentSessionId = data.session_id;
@@ -393,6 +448,8 @@ chatForm.addEventListener('submit', async (e) => {
                         console.debug('Agent trace:', data.entries);
                     } else if (data.type === 'done') {
                         updateAgentStatus(null);
+                        currentAgentName = null;
+                        hasStreamContent = false;
                         isProcessing = false;
                         sendButton.disabled = false;
                         messageInput.disabled = false;
@@ -401,6 +458,8 @@ chatForm.addEventListener('submit', async (e) => {
                         removeTypingIndicator();
                         addMessage(`Error: ${data.message}`);
                         updateAgentStatus(null);
+                        currentAgentName = null;
+                        hasStreamContent = false;
                         isProcessing = false;
                         sendButton.disabled = false;
                         messageInput.disabled = false;

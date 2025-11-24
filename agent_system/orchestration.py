@@ -136,8 +136,7 @@ class Orchestrator:
         
         # Clear any widgets left over from a previous turn
         context.pending_widgets.clear()
-        # Clear ephemeral widget flags from previous turns
-        if context.flags:
+        if not context.state.pending_offer and context.flags:
             keys_to_clear = [k for k in context.flags if k.startswith("needs_")]
             for k in keys_to_clear:
                 del context.flags[k]
@@ -147,16 +146,25 @@ class Orchestrator:
             context.user_intent = user_input
         
         # 5. Add new user message to history
+        is_new_session = len(context.history) == 0
         context.add_message("user", user_input)
+        self._update_state_for_turn(context, user_input, is_new_session)
         
         # 6. Reset hop count for this turn
         context.hop_count = 0
         
-        # 7. Start with Guardrail
-        current_agent_names = ["Guardrail"]
+        # 7. Run Guardrail first for safety / emergency handling
+        agent_sequence = []
+        guardrail_agent = self.agents["Guardrail"]
+        guardrail_result = guardrail_agent.run(context)
+        agent_sequence.append("Guardrail")
+        
+        if "STOP" in guardrail_result:
+            current_agent_names = ["STOP"]
+        else:
+            current_agent_names = self._determine_entry_agents(context)
         
         # 8. Mesh Loop with loop detection
-        agent_sequence = []  # Track which agents have been called
         
         while context.hop_count < 15:
             context.hop_count += 1
@@ -260,3 +268,51 @@ class Orchestrator:
             
             return final_response, session_id, widgets, context.trace
         return "System Error: No response generated.", session_id, [], context.trace
+
+    def _infer_intent(self, user_input: str) -> str:
+        normalized = user_input.lower()
+        plan_markers = {
+            "plan", "fix", "improve", "recommend", "action", "what can i do",
+            "how do i", "give me steps", "treatment", "program"
+        }
+        for marker in plan_markers:
+            if marker in normalized:
+                return "plan"
+        return "diagnosis"
+
+    def _update_state_for_turn(self, context: AgentContext, user_input: str, is_new_session: bool):
+        state = context.state
+        normalized = user_input.strip().lower()
+        confirmations = {
+            "yes", "yes please", "sure", "please do", "let's do it",
+            "do it", "absolutely", "ok", "okay", "yeah", "yep"
+        }
+        declines = {"no", "not now", "maybe later", "no thanks", "stop"}
+        
+        if state.stage == "awaiting_confirmation" and state.pending_offer:
+            if normalized in confirmations:
+                pending = state.pending_offer
+                state.confirm_offer()
+                state.set_intent("plan")
+                context.add_trace(f"User confirmed offer '{pending}'")
+                return
+            if normalized in declines:
+                context.add_trace(f"User declined offer '{state.pending_offer}'")
+                state.clear_offer()
+            else:
+                context.add_trace("Pending offer ignored; resetting to triage.")
+                state.clear_offer()
+        
+        intent = self._infer_intent(user_input)
+        state.set_intent(intent)
+        if state.stage != "plan_delivery":
+            state.set_stage("triage" if is_new_session or intent in {"diagnosis", "plan"} else "triage")
+
+    def _determine_entry_agents(self, context: AgentContext):
+        state = context.state
+        if state.stage == "plan_delivery" and state.confirmed_targets:
+            agents = list(dict.fromkeys(state.confirmed_targets))
+            context.add_trace(f"Plan delivery -> {agents}")
+            print(f"  🎯 Executing confirmed plan with: {', '.join(agents)}")
+            return agents
+        return ["Triage Agent"]

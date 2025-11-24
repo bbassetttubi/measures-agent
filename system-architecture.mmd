@@ -1,0 +1,167 @@
+## Architecture Diagram
+
+```mermaid
+flowchart TB
+    %% ============================ FRONTEND ============================
+    subgraph FRONTEND ["Frontend (Port 5000)"]
+        UI["Web UI (index.html + app.js)<br/>chat transcript + widget slots"]
+        UI_STATE["Local Storage<br/>• session_id<br/>• last conversation"]
+    EVENT_STREAM["EventSource SSE client<br/>events: agent, stream, widget, trace, done<br/>per-agent bubbles reset on agent change"]
+    WIDGET_RENDER["Widget Renderer<br/>dedup via seenWidgets<br/>Meal / Workout / Supplement cards"]
+    end
+
+    %% ============================ BACKEND / API ============================
+    subgraph BACKEND ["Flask API Layer"]
+        FLASK["Flask Server<br/>web_app.py"]
+        API["/api/chat SSE endpoint<br/>session-aware"]
+        SSE_PIPE["Streaming generator<br/>only Guardrail+Critic text reaches SSE<br/>ensures narrative before widgets"]
+    end
+
+    %% ============================ ORCHESTRATION ============================
+    subgraph ORCH_LAYER ["Orchestration Runtime"]
+        ORCH["Orchestrator<br/>run_mesh: routing + loop guard"]
+        SESSION_MGR["Session Manager<br/>UUID sessions, 60m TTL"]
+        CONTEXT["AgentContext + ConversationState<br/>history, flags, tool cache, pending widgets<br/>stage/intent/pending_offer"]
+        RESP_CACHE["Response Cache<br/>text + widgets keyed by data_version"]
+        TRACE["Trace Collector<br/>ordered agent/tool activity"]
+        STATE_MACHINE["State Machine Helper<br/>intent inference + confirmation routing"]
+    end
+
+    %% ============================ AGENT MESH ============================
+    subgraph MESH ["Agent Mesh (Gemini 2.5 Flash)"]
+        GUARD["Guardrail<br/>safety + routing<br/>no tools"]
+        TRIAGE["Triage Agent<br/>multi-domain planner<br/>max 3 loops"]
+        subgraph SPECIALISTS ["Specialists"]
+            PHYS["Physician<br/>get_biomarkers + ranges<br/>sets risk flags"]
+            NUT["Nutritionist<br/>biomarker-driven diet"]
+            FIT["Fitness Coach<br/>profile + activity + workout"]
+            SLEEP["Sleep Doctor"]
+            MIND["Mindfulness Coach"]
+            USER_P["User Persona"]
+        end
+        CRITIC["Critic + Widget Aggregator<br/>narrative-first synthesis<br/>only stage=plan_delivery triggers widgets"]
+        REG["Agent Registry<br/>capability prompt"]
+    end
+
+    %% ============================ EXECUTION HELPERS ============================
+    subgraph EXECUTION ["Concurrency + Widget Engine"]
+        THREAD_POOL["ThreadPoolExecutor<br/>parallel MCP tool calls"]
+        PARALLEL_RUN["Parallel Agent Runner<br/>Nutritionist & Fitness Coach, etc."]
+        WIDGET_TOOLSET["WidgetToolset<br/>return_*_widget<br/>signature dedup + caching"]
+    end
+
+    %% ============================ MCP LAYER ============================
+    subgraph MCP_LAYER ["MCP Integration"]
+        MCP_CLIENT["SimpleMCPClient<br/>tool router + retries + cache hits"]
+        subgraph MCP_SERVERS ["FastMCP + stdio servers"]
+            USER_DATA_SRV["User Data Server<br/>biomarkers/profile/activity/sleep/food"]
+            RESOURCES_SRV["Resources Server<br/>ranges/workouts/supplements/KB search"]
+        end
+    end
+
+    %% ============================ DATA LAYER ============================
+    subgraph DATA_LAYER ["Data & Content"]
+        subgraph USER_DATA ["User JSON"]
+            BIO_DATA["biomarkers.json"]
+            ACT_DATA["activity.json"]
+            FOOD_DATA["food_journal.json"]
+            SLEEP_DATA["sleep.json"]
+            PROFILE_DATA["profile.json"]
+        end
+        subgraph KNOWLEDGE ["Knowledge + Widgets"]
+            RANGES["ranges.json"]
+            WORKOUTS["workouts.json"]
+            SUPPS["supplements.json"]
+            MEALS["meals.json"]
+            KB[("LanceDB knowledge base")]
+        end
+        TESTS["Regression tests<br/>tests/test_context.py<br/>tests/test_agent_widgets.py"]
+    end
+
+    %% ============================ USER FLOW ============================
+    UI -->|"POST /api/chat<br/>payload + session_id"| API
+    API -->|"SSE events"| EVENT_STREAM
+    EVENT_STREAM --> UI
+    UI -.->|"render widgets"| WIDGET_RENDER
+    UI_STATE -.->|"persist session"| UI
+
+    %% Backend Flow
+    API -->|"invoke run_mesh"| ORCH
+    ORCH <-->|"get/update"| SESSION_MGR
+    SESSION_MGR <-->|"history + flags + cache"| CONTEXT
+    ORCH --> STATE_MACHINE
+    STATE_MACHINE --> CONTEXT
+    ORCH <-->|"hit/miss"| RESP_CACHE
+    ORCH --> TRACE
+
+    %% Agent routing
+    ORCH --> GUARD
+    GUARD -->|"single domain"| SPECIALISTS
+    GUARD -->|"multi domain"| TRIAGE
+    TRIAGE --> SPECIALISTS
+    SPECIALISTS --> CRITIC
+    CRITIC -->|"final response + widget calls"| ORCH
+    CRITIC --> WIDGET_TOOLSET
+
+    %% Concurrency
+    SPECIALISTS --> PARALLEL_RUN
+    MCP_CLIENT --> THREAD_POOL
+    THREAD_POOL -->|"parallel MCP requests"| MCP_SERVERS
+
+    %% Widget plumbing
+    WIDGET_TOOLSET -->|"return_meal_plan_widget"| RESOURCES_SRV
+    WIDGET_TOOLSET -->|"return_workout_widget"| RESOURCES_SRV
+    WIDGET_TOOLSET -->|"return_supplement_widget"| RESOURCES_SRV
+
+    %% Specialist data access
+    PHYS -->|"get_biomarkers"| USER_DATA_SRV
+    PHYS -->|"get_biomarker_ranges"| RESOURCES_SRV
+    NUT -->|"profile + journal"| USER_DATA_SRV
+    FIT -->|"profile + activity"| USER_DATA_SRV
+    FIT -->|"get_workout_plan"| RESOURCES_SRV
+    SLEEP -->|"get_sleep_data"| USER_DATA_SRV
+    MIND -->|"search KB"| RESOURCES_SRV
+
+    USER_DATA_SRV --> USER_DATA
+    RESOURCES_SRV --> KNOWLEDGE
+    TESTS -.->|"validates cache + widget flags"| ORCH_LAYER
+
+    %% ============================ NUMBERED FLOW SUMMARY ============================
+    subgraph FLOW ["End-to-End Data Flow"]
+        STEP1["1. User enters prompt in Web UI"]
+        STEP2["2. Frontend POSTs /api/chat with session_id"]
+        STEP3["3. Orchestrator loads session/context, hits cache"]
+        STEP4["4. Agents execute (parallel specialists + MCP tools)"]
+        STEP5["5. Critic synthesizes + calls widget tools"]
+        STEP6["6. SSE streams narrative, trace, and widget payloads"]
+        STEP7["7. Browser renders chat + interactive widgets"]
+    end
+
+    STEP1 --> STEP2 --> STEP3 --> STEP4 --> STEP5 --> STEP6 --> STEP7
+    STEP1 -.-> UI
+    STEP2 -.-> API
+    STEP3 -.-> ORCH
+    STEP4 -.-> SPECIALISTS
+    STEP5 -.-> CRITIC
+    STEP6 -.-> EVENT_STREAM
+    STEP7 -.-> WIDGET_RENDER
+
+    %% Styling
+    classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef orch fill:#ede7f6,stroke:#311b92,stroke-width:2px
+    classDef agents fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef exec fill:#ffe0f0,stroke:#ad1457,stroke-width:2px
+    classDef mcp fill:#f8bbd0,stroke:#880e4f,stroke-width:2px
+    classDef data fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef flow fill:#fffde7,stroke:#827717,stroke-width:2px
+
+    class UI,UI_STATE,EVENT_STREAM,WIDGET_RENDER frontend
+    class FLASK,API,SSE_PIPE backend
+    class ORCH,SESSION_MGR,CONTEXT,RESP_CACHE,TRACE orch
+    class GUARD,TRIAGE,PHYS,NUT,FIT,SLEEP,MIND,USER_P,CRITIC,REG agents
+    class THREAD_POOL,PARALLEL_RUN,WIDGET_TOOLSET exec
+    class MCP_CLIENT,USER_DATA_SRV,RESOURCES_SRV mcp
+    class BIO_DATA,ACT_DATA,FOOD_DATA,SLEEP_DATA,PROFILE_DATA,RANGES,WORKOUTS,SUPPS,MEALS,KB,TESTS data
+    class FLOW,STEP1,STEP2,STEP3,STEP4,STEP5,STEP6,STEP7 flow
+```

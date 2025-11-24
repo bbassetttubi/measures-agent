@@ -6,6 +6,7 @@ from .registry import AgentRegistry
 from .mcp_client import SimpleMCPClient
 from .tools.widget_tools import WidgetToolset
 import os
+import sys
 from dotenv import load_dotenv
 import time
 import hashlib
@@ -20,6 +21,14 @@ genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 # Caches model instances to avoid recreating them with identical configurations
 _model_cache = {}
 _model_cache_lock = __import__('threading').Lock()
+
+OFFER_TARGET_MAP = {
+    "comprehensive_plan": ["Nutritionist", "Fitness Coach", "Sleep Doctor", "Mindfulness Coach"],
+    "nutrition_plan": ["Nutritionist"],
+    "fitness_plan": ["Fitness Coach"],
+    "sleep_plan": ["Sleep Doctor"],
+    "mindfulness_plan": ["Mindfulness Coach"],
+}
 
 class Agent:
     def __init__(
@@ -47,13 +56,32 @@ class Agent:
         
         # Configure the model
         self.model_name = "gemini-2.5-flash" # SOTA model
+
+    def _should_stream_to_client(self) -> bool:
+        """Only certain agents (Guardrail, Critic) should surface text directly to the UI."""
+        return self.name in {"Guardrail", "Critic"}
+
+    def _write_text_chunk(self, text: str, newline: bool = False, prefix: bool = True):
+        """Stream text either to SSE (sys.stdout) or only to server logs (sys.__stdout__)."""
+        target = sys.stdout if self._should_stream_to_client() else sys.__stdout__
+        if prefix:
+            target.write("  💬 ")
+        target.write(text)
+        if newline:
+            target.write("\n")
+        target.flush()
         
     def _build_system_prompt(self, context: AgentContext) -> str:
         registry_prompt = AgentRegistry.get_registry_prompt()
         
+        state = context.state
         context_str = f"""
         CURRENT CONTEXT:
-        - User Intent: {context.user_intent}
+        - User Intent (raw): {context.user_intent}
+        - Conversation Intent: {state.intent}
+        - Conversation Stage: {state.stage}
+        - Pending Offer: {state.pending_offer if state.pending_offer else "None"}
+        - Offer Targets: {state.offer_targets if state.offer_targets else "None"}
         - Accumulated Findings: {context.accumulated_findings}
         - Pending Tasks: {context.pending_tasks}
         - System Flags: {context.flags}
@@ -245,30 +273,45 @@ class Agent:
         
         # 4. Send Request with streaming
         llm_start = time.time()
-        response_stream = chat.send_message("Proceed with your task based on the context.", stream=True)
-        
-        # Collect streamed response and chunks
+        response_stream = None
         full_text = ""
         has_text = False
         chunks = []
-        print(f"  💬 ", end="", flush=True)
+        streamed_text = False
         
-        for chunk in response_stream:
-            chunks.append(chunk)
-            # Check if this chunk has text (not a function call)
+        try:
+            response_stream = chat.send_message("Proceed with your task based on the context.", stream=True)
+            for chunk in response_stream:
+                chunks.append(chunk)
+                # Check if this chunk has text (not a function call)
+                try:
+                    if chunk.text:
+                        has_text = True
+                        streamed_text = True
+                        self._write_text_chunk(chunk.text)
+                        full_text += chunk.text
+                except ValueError:
+                    # This chunk is a function call, not text - skip streaming for it
+                    pass
+        except Exception as stream_error:
+            print(f"\n  ❌ Streaming error detected: {stream_error}. Retrying without streaming...")
             try:
-                if chunk.text:
-                    has_text = True
-                    print(chunk.text, end="", flush=True)
-                    full_text += chunk.text
-            except ValueError:
-                # This chunk is a function call, not text - skip streaming for it
+                chat.rewind()
+            except Exception:
                 pass
-        
-        if has_text:
-            print()  # New line after streaming
+            fallback_response = chat.send_message("Proceed with your task based on the context.")
+            chunks = [fallback_response]
+            full_text = self._extract_text_from_parts(fallback_response)
+            if full_text:
+                has_text = True
+                streamed_text = True
+                self._write_text_chunk(full_text, newline=True)
         else:
-            print("(function call)")  # Indicate it was a function call
+            if streamed_text:
+                self._write_text_chunk("", newline=True, prefix=False)
+        finally:
+            if not streamed_text and not has_text:
+                self._write_text_chunk("(function call)", newline=True)
         
         llm_time = time.time() - llm_start
         print(f"  ⏱️  LLM Response: {llm_time:.2f}s")
@@ -297,10 +340,18 @@ class Agent:
                     continue  # Already processed as a native widget tool
                 
                 if tool_name == "transfer_handoff":
+                    if full_text:
+                        self._finalize_text_response(full_text, context, allow_widgets=False)
+                        full_text = ""
                     target = args["target_agent"]
                     reason = args["reason"]
                     if "new_finding" in args and args["new_finding"]:
-                        context.add_finding(f"[{self.name}]: {args['new_finding']}")
+                        finding = args["new_finding"]
+                        print(f"  🔎 New finding from {self.name}: {finding}")
+                        context.add_finding(f"[{self.name}]: {finding}")
+                        if "OFFER:" in finding:
+                            offer_value = finding.split("OFFER:")[-1].strip()
+                            self._register_offer(context, offer_value)
                     
                     # Parse target agents (can be comma-separated for parallel execution)
                     target_agents = [agent.strip() for agent in target.split(",")]
@@ -327,6 +378,11 @@ class Agent:
                             entry["cached_result"] = cached
                     mcp_tool_calls.append(entry)
         
+        # If we have text AND tool calls, log the text now (without widgets) before executing tools
+        if mcp_tool_calls and full_text:
+            self._finalize_text_response(full_text, context, allow_widgets=False)
+            full_text = ""
+
         # Execute all MCP tools in parallel if we have multiple
         if mcp_tool_calls:
             try:
@@ -463,12 +519,7 @@ class Agent:
                     
         # If text response (already streamed above)
         if full_text:
-            if self.name == "Critic":
-                self._auto_widgets_from_flags(context)
-            context.add_message("model", full_text, sender=self.name)
-            if self.widgets:
-                context.pending_widgets.extend(self.widgets)
-                self.widgets = []
+            self._finalize_text_response(full_text, context, allow_widgets=True)
             agent_total = time.time() - agent_start
             print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
             return self._get_completion_targets()
@@ -476,10 +527,14 @@ class Agent:
         if self.name == "Physician" and not self._summary_prompted:
             self._summary_prompted = True
             print("  ⚠️  Physician response lacked narrative; requesting summary.")
-            summary_response = chat.send_message(
-                "Provide a concise, user-facing summary of the key biomarker findings, "
-                "then explicitly hand off to Nutritionist and Fitness Coach with justification."
-            )
+            try:
+                summary_response = chat.send_message(
+                    "Provide a concise, user-facing summary of the key biomarker findings, "
+                    "then explicitly hand off to Nutritionist and Fitness Coach with justification."
+                )
+            except Exception as summary_error:
+                print(f"  ❌ Summary request failed: {summary_error}. Proceeding with default handoff.")
+                return ["Critic"]
             return self._process_response(summary_response, context, chat)
         
         default_handoff = self._get_completion_targets()
@@ -521,7 +576,12 @@ class Agent:
                     target = args["target_agent"]
                     reason = args["reason"]
                     if "new_finding" in args and args["new_finding"]:
-                        context.add_finding(f"[{self.name}]: {args['new_finding']}")
+                        finding = args["new_finding"]
+                        print(f"  🔎 New finding from {self.name}: {finding}")
+                        context.add_finding(f"[{self.name}]: {finding}")
+                        if "OFFER:" in finding:
+                            offer_value = finding.split("OFFER:")[-1].strip()
+                            self._register_offer(context, offer_value)
                     
                     # Parse target agents (can be comma-separated for parallel execution)
                     target_agents = [agent.strip() for agent in target.split(",")]
@@ -545,6 +605,15 @@ class Agent:
                         cached = context.get_cached_tool_result(tool_name, args)
                         if cached is not None:
                             entry["cached_result"] = cached
+                    
+                    # Set flags for downstream widget selection based on tool calls
+                    if tool_name == "get_workout_plan":
+                        context.set_flag("needs_workout_widget", True)
+                    elif tool_name == "get_food_journal" or tool_name == "get_meal_plan":
+                        context.set_flag("needs_meal_widget", True)
+                    elif tool_name == "get_supplement_info":
+                        context.set_flag("needs_supp_widget", True)
+                        
                     mcp_tool_calls.append(entry)
         
         # Execute MCP tools in parallel if we have any
@@ -661,7 +730,7 @@ class Agent:
         text_content = self._extract_text_from_parts(response)
         if text_content:
             # Stream the full response text to frontend/stdout for SSE
-            print(f"  💬 {text_content}")
+            self._write_text_chunk(text_content, newline=True)
             context.add_message("model", text_content, sender=self.name)
             if self.widgets:
                 context.pending_widgets.extend(self.widgets)
@@ -765,16 +834,63 @@ class Agent:
         if lipase is not None and lipase > 60:
             context.set_flag("lipase_high", True)
 
+    def _register_offer(self, context: AgentContext, offer_type: str):
+        if not offer_type:
+            return
+        targets = OFFER_TARGET_MAP.get(offer_type) or ["Physician"]
+        context.state.set_offer(offer_type, targets)
+        target_str = ", ".join(targets) if targets else "unspecified specialists"
+        print(f"  📌 Pending offer '{offer_type}' registered for {target_str}.")
+
+    def _update_pending_offer(self, context: AgentContext, allow_widgets: bool):
+        offer_type = context.state.pending_offer
+        if offer_type and context.state.stage == "awaiting_confirmation":
+            print(f"  📌 Pending Offer active: {offer_type} (awaiting user confirmation).")
+
+    def _finalize_text_response(self, text: str, context: AgentContext, allow_widgets: bool):
+        if not text:
+            return
+        widgets_allowed = allow_widgets
+        if self.name == "Critic":
+            self._update_pending_offer(context, allow_widgets)
+            if widgets_allowed:
+                pending_offer = context.state.pending_offer
+                awaiting_confirmation = context.state.stage == "awaiting_confirmation"
+                plan_delivery = context.state.stage == "plan_delivery"
+                if pending_offer and awaiting_confirmation:
+                    print(f"  ⏳ Widgets deferred; pending offer '{pending_offer}' not confirmed yet.")
+                    widgets_allowed = False
+                else:
+                    self._auto_widgets_from_flags(context)
+                    if plan_delivery and pending_offer:
+                        print(f"  ✅ Offer '{pending_offer}' fulfilled; delivering plan output.")
+                        context.state.mark_plan_delivered()
+        context.add_message("model", text, sender=self.name)
+        if widgets_allowed and self.widgets:
+            context.pending_widgets.extend(self.widgets)
+            self.widgets = []
+        elif not widgets_allowed:
+            # Discard any speculative widgets captured before the final response
+            self.widgets = []
+
     def _auto_widgets_from_flags(self, context: AgentContext):
         if not self.widget_toolset:
             return
+        
+        # Debug: print active flags
+        print(f"  🔍 Widget flag check: needs_meal={context.get_flag('needs_meal_widget')}, needs_workout={context.get_flag('needs_workout_widget')}, needs_supp={context.get_flag('needs_supp_widget')}")
+        
         desired = []
         if context.get_flag("needs_meal_widget"):
-            desired.append(("return_meal_plan_widget", {"plan_type": "cholesterol"}))
+            desired.append(("needs_meal_widget", "return_meal_plan_widget", {"plan_type": "cholesterol"}))
         if context.get_flag("needs_workout_widget"):
             goal = "Cardio"
-            desired.append(("return_workout_widget", {"goal": goal}))
+            desired.append(("needs_workout_widget", "return_workout_widget", {"goal": goal}))
         if context.get_flag("needs_supp_widget"):
-            desired.append(("return_supplement_widget", {"supplement_names": ["Vitamin D3"]}))
-        for tool_name, args in desired:
+            desired.append(("needs_supp_widget", "return_supplement_widget", {"supplement_names": ["Vitamin D3"]}))
+        
+        print(f"  🎯 Auto-widget selection: {len(desired)} widgets to add.")
+        
+        for flag_name, tool_name, args in desired:
             self._handle_widget_tool(tool_name, args, context)
+            context.flags.pop(flag_name, None)

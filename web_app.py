@@ -118,7 +118,9 @@ def chat():
                     # Stream widgets after text
                     if isinstance(content, dict) and 'widgets' in content:
                         for widget in content['widgets']:
-                            yield f"data: {json.dumps({'type': 'widget', 'widget': widget['type'], 'data': widget['data']})}\n\n"
+                            widget_type = widget.get('type', 'unknown')
+                            print(f"  🧩 Streaming widget to client: {widget_type}")
+                            yield f"data: {json.dumps({'type': 'widget', 'widget': widget_type, 'data': widget['data']})}\n\n"
                     if isinstance(content, dict) and 'trace' in content:
                         yield f"data: {json.dumps({'type': 'trace', 'entries': content['trace']})}\n\n"
                     
