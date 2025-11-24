@@ -409,9 +409,15 @@ class Agent:
                     if full_text:
                         self._finalize_text_response(full_text, context, allow_widgets=False)
                         full_text = ""
+                    stop_text = (
+                        f"⚠️ Emergency detected: {reason}\n\n"
+                        "Please stop interacting with the system and contact emergency medical services immediately "
+                        "(call 911 or your local emergency number)."
+                    )
+                    self._write_text_chunk(stop_text, newline=True)
                     print(f"  🛑 Emergency stop triggered: {reason}")
                     context.add_trace(f"{self.name}: emergency stop -> {reason}")
-                    context.add_message("model", f"Emergency stop triggered: {reason}", sender=self.name)
+                    context.add_message("model", stop_text, sender=self.name)
                     agent_total = time.time() - agent_start
                     print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
                     return ["STOP"]

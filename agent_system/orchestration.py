@@ -2,6 +2,7 @@ from .models import AgentContext, ConversationState
 from .agents import create_agents
 from .mcp_client import SimpleMCPClient
 from .session_manager import SessionManager
+from .base_agent import OFFER_TARGET_MAP
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,6 +11,13 @@ import os
 from pathlib import Path
 import re
 from typing import Optional
+
+PARTIAL_OFFER_KEYWORDS = {
+    "nutrition_plan": ("nutrition", "meal", "diet", "food"),
+    "fitness_plan": ("fitness", "exercise", "workout", "training"),
+    "sleep_plan": ("sleep", "insomnia", "bedtime", "restless"),
+    "mindfulness_plan": ("mindfulness", "meditation", "stress", "anxiety", "mental")
+}
 
 class Orchestrator:
     def __init__(self):
@@ -322,6 +330,16 @@ class Orchestrator:
         previous_focus = state.focus
 
         if state.stage == "awaiting_confirmation" and state.pending_offer:
+            partial_offer = self._detect_partial_offer_request(normalized, state.pending_offer)
+            if partial_offer:
+                targets = OFFER_TARGET_MAP.get(partial_offer, [])
+                state.set_offer(partial_offer, targets)
+                state.confirm_offer()
+                state.set_intent("plan")
+                state.set_focus("plan")
+                context.add_trace(f"User requested partial plan '{partial_offer}' -> {targets or 'no targets'}")
+                self._record_focus_transition(context, previous_focus, state.focus)
+                return
             if normalized in confirmations or any(normalized.startswith(c) for c in confirmations):
                 pending = state.pending_offer
                 state.confirm_offer()
@@ -359,6 +377,16 @@ class Orchestrator:
             context.add_trace(f"Focus '{state.focus}' mapped directly to Critic.")
             return ["Critic"]
         return ["Triage Agent"]
+
+    def _detect_partial_offer_request(self, normalized: str, pending_offer: str) -> Optional[str]:
+        if not normalized or not pending_offer:
+            return None
+        if pending_offer != "comprehensive_plan":
+            return None
+        for offer, keywords in PARTIAL_OFFER_KEYWORDS.items():
+            if any(keyword in normalized for keyword in keywords):
+                return offer
+        return None
 
     def _apply_guardrail_focus_hint(self, context: AgentContext):
         if not context.history:
