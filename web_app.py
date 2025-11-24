@@ -93,6 +93,19 @@ def chat():
                 
                 if msg_type == 'output':
                     # Parse output for agent activity
+                    stripped = content.strip()
+                    if stripped.startswith("FOCUS_TRANSITION::"):
+                        transition = stripped.split("FOCUS_TRANSITION::", 1)[1]
+                        parts = transition.split("->")
+                        previous_focus = parts[0].strip() if len(parts) > 0 else "none"
+                        new_focus = parts[1].strip() if len(parts) > 1 else ""
+                        payload = {
+                            'type': 'status',
+                            'focus': new_focus,
+                            'previous': None if previous_focus == 'none' else previous_focus
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
+                        continue
                     if '--- Agent Active:' in content:
                         agent_name = content.split('--- Agent Active:')[1].strip().replace('---', '').strip()
                         current_agent = agent_name

@@ -9,17 +9,21 @@ class Message(BaseModel):
 
 class ConversationState(BaseModel):
     stage: str = Field(default="triage", description="High-level phase of the conversation (triage, diagnosis, awaiting_confirmation, plan_delivery).")
-    intent: str = Field(default="unspecified", description="User intent for the current turn (diagnosis vs plan).")
+    intent: str = Field(default="unspecified", description="User intent for the current turn (diagnosis, plan, wellbeing, progress, acceleration).")
+    focus: str = Field(default="diagnosis", description="Current conversational focus such as diagnosis, plan, wellbeing, progress, or acceleration.")
     pending_offer: Optional[str] = Field(default=None, description="Offer awaiting user confirmation.")
     offer_targets: List[str] = Field(default_factory=list, description="Agents required to fulfill the pending offer.")
     confirmed_targets: List[str] = Field(default_factory=list, description="Agents confirmed by the user for execution.")
+    last_focus_broadcast: Optional[str] = Field(default=None, description="Most recent focus value surfaced to the user.")
 
     def reset(self):
         self.stage = "triage"
-        self.intent = "unspecified"
+        self.intent = "diagnosis"
+        self.focus = "diagnosis"
         self.pending_offer = None
         self.offer_targets.clear()
         self.confirmed_targets.clear()
+        self.last_focus_broadcast = None
 
     def set_stage(self, stage: str):
         self.stage = stage
@@ -27,11 +31,16 @@ class ConversationState(BaseModel):
     def set_intent(self, intent: str):
         self.intent = intent
 
+    def set_focus(self, focus: str):
+        self.focus = focus
+
     def set_offer(self, offer_type: str, targets: Optional[List[str]] = None):
         self.pending_offer = offer_type
         self.offer_targets = list(targets or [])
         self.confirmed_targets.clear()
         self.stage = "awaiting_confirmation"
+        if self.focus != "plan":
+            self.focus = "plan"
 
     def clear_offer(self):
         self.pending_offer = None
@@ -43,10 +52,16 @@ class ConversationState(BaseModel):
             return
         self.confirmed_targets = list(self.offer_targets)
         self.stage = "plan_delivery"
+        if self.focus != "plan":
+            self.focus = "plan"
 
     def mark_plan_delivered(self):
         self.clear_offer()
         self.stage = "diagnosis"
+        self.focus = "diagnosis"
+
+    def record_focus_broadcast(self, focus: str):
+        self.last_focus_broadcast = focus
 
 class AgentContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)

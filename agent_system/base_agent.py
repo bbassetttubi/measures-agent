@@ -40,6 +40,8 @@ class Agent:
         enable_widget_tools: bool = False,
         allowed_mcp_tools: Optional[List[str]] = None,
         default_next_agents: Optional[List[str]] = None,
+        enable_handoff: bool = True,
+        allow_emergency_stop: bool = False,
     ):
         self.name = name
         self.role = role
@@ -53,6 +55,8 @@ class Agent:
         self.cacheable_tools = {"get_biomarker_ranges"}
         self.allowed_mcp_tools = set(allowed_mcp_tools) if allowed_mcp_tools else None
         self.default_next_agents = default_next_agents
+        self.enable_handoff = enable_handoff
+        self.allow_emergency_stop = allow_emergency_stop
         
         # Configure the model
         self.model_name = "gemini-2.5-flash" # SOTA model
@@ -79,6 +83,7 @@ class Agent:
         CURRENT CONTEXT:
         - User Intent (raw): {context.user_intent}
         - Conversation Intent: {state.intent}
+        - Conversation Focus: {state.focus}
         - Conversation Stage: {state.stage}
         - Pending Offer: {state.pending_offer if state.pending_offer else "None"}
         - Offer Targets: {state.offer_targets if state.offer_targets else "None"}
@@ -138,6 +143,26 @@ class Agent:
                             "new_finding": {"type": "STRING", "description": "Optional finding to add to context."}
                         },
                         "required": ["target_agent", "reason"]
+                    }
+                }
+            ]
+        }
+
+    def _get_emergency_stop_tool(self):
+        return {
+            "function_declarations": [
+                {
+                    "name": "trigger_emergency_stop",
+                    "description": "Immediately stop the conversation and instruct the user to contact emergency services.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "reason": {
+                                "type": "STRING",
+                                "description": "Short description of the emergency condition or policy violation."
+                            }
+                        },
+                        "required": ["reason"]
                     }
                 }
             ]
@@ -243,11 +268,13 @@ class Agent:
         # 1. Setup Tools (MCP + Widget + Handoff)
         mcp_tools = self._filter_mcp_tools(self.mcp_client.get_tools_definitions())
         widget_tools = self._get_widget_tools()
-        handoff_tool = self._get_handoff_tool()
         all_tools = list(mcp_tools)
         if widget_tools["function_declarations"]:
             all_tools.append(widget_tools)
-        all_tools.append(handoff_tool)
+        if self.enable_handoff:
+            all_tools.append(self._get_handoff_tool())
+        if self.allow_emergency_stop:
+            all_tools.append(self._get_emergency_stop_tool())
         
         # Clear per-run widget tracking
         self.widgets = []
@@ -340,6 +367,13 @@ class Agent:
                     continue  # Already processed as a native widget tool
                 
                 if tool_name == "transfer_handoff":
+                    # Guardrail should only use STOP handoffs; ignore others so orchestrator can decide.
+                    if self.name == "Guardrail":
+                        target_arg = args.get("target_agent", "").strip()
+                        if target_arg.upper() != "STOP":
+                            print(f"  ⚠️  Guardrail attempted to route to '{target_arg}', ignoring (orchestrator handles routing).")
+                            context.add_trace(f"Guardrail transfer to '{target_arg}' ignored; state machine will route.")
+                            continue
                     if full_text:
                         self._finalize_text_response(full_text, context, allow_widgets=False)
                         full_text = ""
@@ -370,6 +404,17 @@ class Agent:
                     agent_total = time.time() - agent_start
                     print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
                     return target_agents
+                elif tool_name == "trigger_emergency_stop" and self.allow_emergency_stop:
+                    reason = args.get("reason", "Emergency condition detected.")
+                    if full_text:
+                        self._finalize_text_response(full_text, context, allow_widgets=False)
+                        full_text = ""
+                    print(f"  🛑 Emergency stop triggered: {reason}")
+                    context.add_trace(f"{self.name}: emergency stop -> {reason}")
+                    context.add_message("model", f"Emergency stop triggered: {reason}", sender=self.name)
+                    agent_total = time.time() - agent_start
+                    print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
+                    return ["STOP"]
                 else:
                     entry = {"name": tool_name, "args": args}
                     if tool_name in self.cacheable_tools:

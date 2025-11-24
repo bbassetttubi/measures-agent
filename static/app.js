@@ -3,6 +3,7 @@ const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const agentStatus = document.getElementById('agentStatus');
+const focusPill = document.getElementById('focusPill');
 
 let isProcessing = false;
 let currentMessageElement = null;
@@ -11,6 +12,7 @@ let currentAgentName = null;
 let hasStreamContent = false;
 let currentSessionId = localStorage.getItem('session_id') || null;
 let renderedWidgets = new Set();  // Track which widgets we've already rendered to prevent duplicates
+let lastFocus = null;
 
 // Function to start a new conversation
 function startNewConversation() {
@@ -35,6 +37,7 @@ function startNewConversation() {
             </div>
         </div>
     `;
+    updateFocusPill(null);
     messageInput.focus();
 }
 
@@ -242,11 +245,40 @@ const agentStatusMessages = {
     "default": "I'm analyzing your health data..."
 };
 
+const focusLabels = {
+    "diagnosis": "Diagnosis",
+    "plan": "Action Plan",
+    "wellbeing": "Wellbeing",
+    "progress": "Progress Outlook",
+    "acceleration": "Acceleration"
+};
+
 function getAgentStatusMessage(agentName) {
     if (!agentName || !agentStatusMessages[agentName]) {
         return agentStatusMessages["default"];
     }
     return agentStatusMessages[agentName];
+}
+
+function updateFocusPill(focus) {
+    if (!focusPill) return;
+    if (!focus) {
+        focusPill.classList.add('hidden');
+        focusPill.dataset.focus = '';
+        lastFocus = null;
+        return;
+    }
+    if (focus === lastFocus) {
+        return;
+    }
+    lastFocus = focus;
+    const label = focusLabels[focus] || focus;
+    const valueEl = focusPill.querySelector('.pill-value');
+    if (valueEl) {
+        valueEl.textContent = label;
+    }
+    focusPill.dataset.focus = focus;
+    focusPill.classList.remove('hidden');
 }
 
 // Add typing indicator with optional agent name
@@ -446,6 +478,8 @@ chatForm.addEventListener('submit', async (e) => {
                         }
                     } else if (data.type === 'trace') {
                         console.debug('Agent trace:', data.entries);
+                    } else if (data.type === 'status') {
+                        updateFocusPill(data.focus);
                     } else if (data.type === 'done') {
                         updateAgentStatus(null);
                         currentAgentName = null;

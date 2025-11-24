@@ -1,4 +1,4 @@
-from .models import AgentContext
+from .models import AgentContext, ConversationState
 from .agents import create_agents
 from .mcp_client import SimpleMCPClient
 from .session_manager import SessionManager
@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import os
 from pathlib import Path
+import re
+from typing import Optional
 
 class Orchestrator:
     def __init__(self):
@@ -162,6 +164,7 @@ class Orchestrator:
         if "STOP" in guardrail_result:
             current_agent_names = ["STOP"]
         else:
+            self._apply_guardrail_focus_hint(context)
             current_agent_names = self._determine_entry_agents(context)
         
         # 8. Mesh Loop with loop detection
@@ -269,44 +272,81 @@ class Orchestrator:
             return final_response, session_id, widgets, context.trace
         return "System Error: No response generated.", session_id, [], context.trace
 
-    def _infer_intent(self, user_input: str) -> str:
-        normalized = user_input.lower()
-        plan_markers = {
-            "plan", "fix", "improve", "recommend", "action", "what can i do",
-            "how do i", "give me steps", "treatment", "program"
-        }
-        for marker in plan_markers:
-            if marker in normalized:
-                return "plan"
-        return "diagnosis"
+    def _detect_focus(self, normalized: str, state: ConversationState) -> str:
+        """
+        Lightweight classifier that maps the current utterance to one of our conversational foci.
+        """
+        if state.stage in {"awaiting_confirmation", "plan_delivery"} and state.pending_offer:
+            return "plan"
+        if not normalized:
+            return state.focus or "diagnosis"
+        text = normalized.lower()
+        mental_markers = (
+            "depress", "anxiet", "burnout", "stress", "overwhelmed",
+            "mental", "therapy", "sad", "lonely", "mood", "panic", "mindfulness", "anxious"
+        )
+        if any(marker in text for marker in mental_markers):
+            return "wellbeing"
+        progress_markers = (
+            "progress", "30 day", "30-day", "thirty day", "month",
+            "timeline", "how much better", "in 30", "over the next month",
+            "how fast will i improve", "pace", "trajectory", "track my progress"
+        )
+        if any(marker in text for marker in progress_markers):
+            return "progress"
+        acceleration_markers = ("accelerate", "speed up", "faster", "quickly", "sooner", "fast track", "expedite", "intensify", "double down")
+        if any(marker in text for marker in acceleration_markers):
+            return "acceleration"
+        plan_markers = (
+            "plan", "improve", "fix", "help me", "what can i do",
+            "how do i", "steps", "recommend", "what should i do", "action",
+            "give me a plan", "treatment", "program", "recommendations", "next steps"
+        )
+        if any(marker in text for marker in plan_markers):
+            return "plan"
+        diagnosis_markers = (
+            "what are my", "what's wrong", "diagnose", "issues", "risk", "assessment", "biggest problem"
+        )
+        if any(marker in text for marker in diagnosis_markers):
+            return "diagnosis"
+        return state.focus or "diagnosis"
 
     def _update_state_for_turn(self, context: AgentContext, user_input: str, is_new_session: bool):
         state = context.state
         normalized = user_input.strip().lower()
-        confirmations = {
+        confirmations = [
             "yes", "yes please", "sure", "please do", "let's do it",
             "do it", "absolutely", "ok", "okay", "yeah", "yep"
-        }
+        ]
         declines = {"no", "not now", "maybe later", "no thanks", "stop"}
-        
+        previous_focus = state.focus
+
         if state.stage == "awaiting_confirmation" and state.pending_offer:
-            if normalized in confirmations:
+            if normalized in confirmations or any(normalized.startswith(c) for c in confirmations):
                 pending = state.pending_offer
                 state.confirm_offer()
                 state.set_intent("plan")
+                state.set_focus("plan")
+                self._record_focus_transition(context, previous_focus, state.focus)
                 context.add_trace(f"User confirmed offer '{pending}'")
                 return
             if normalized in declines:
                 context.add_trace(f"User declined offer '{state.pending_offer}'")
                 state.clear_offer()
+                state.set_intent("diagnosis")
+                state.set_focus("diagnosis")
+                self._record_focus_transition(context, previous_focus, state.focus)
             else:
-                context.add_trace("Pending offer ignored; resetting to triage.")
-                state.clear_offer()
-        
-        intent = self._infer_intent(user_input)
-        state.set_intent(intent)
-        if state.stage != "plan_delivery":
-            state.set_stage("triage" if is_new_session or intent in {"diagnosis", "plan"} else "triage")
+                context.add_trace("Pending offer clarification received; awaiting explicit confirmation or decline.")
+                return
+
+        focus = self._detect_focus(normalized, state)
+        state.set_focus(focus)
+        state.set_intent(self._intent_from_focus(focus))
+        self._record_focus_transition(context, previous_focus, focus)
+
+        if state.stage not in {"awaiting_confirmation", "plan_delivery"}:
+            state.set_stage("triage")
 
     def _determine_entry_agents(self, context: AgentContext):
         state = context.state
@@ -315,4 +355,44 @@ class Orchestrator:
             context.add_trace(f"Plan delivery -> {agents}")
             print(f"  🎯 Executing confirmed plan with: {', '.join(agents)}")
             return agents
+        if state.focus in {"progress", "acceleration"}:
+            context.add_trace(f"Focus '{state.focus}' mapped directly to Critic.")
+            return ["Critic"]
         return ["Triage Agent"]
+
+    def _apply_guardrail_focus_hint(self, context: AgentContext):
+        if not context.history:
+            return
+        last_msg = context.history[-1]
+        if last_msg.sender != "Guardrail":
+            return
+        state = context.state
+        text = last_msg.content.strip()
+        match = re.search(r"FOCUS:\s*(diagnosis|plan|wellbeing|progress|acceleration)", text, re.IGNORECASE)
+        if match:
+            focus = match.group(1).lower()
+        else:
+            inferred = self._detect_focus(text.lower(), state)
+            print(f"  ⚠️ Guardrail status missing focus tag; classifier inferred '{inferred}'.")
+            context.add_trace(f"Guardrail focus tag missing; inferred '{inferred}'.")
+            focus = inferred
+        previous_focus = state.focus
+        state.set_focus(focus)
+        state.set_intent(self._intent_from_focus(focus))
+        context.add_trace(f"Guardrail focus hint applied: {focus}")
+        self._record_focus_transition(context, previous_focus, focus)
+
+    def _intent_from_focus(self, focus: str) -> str:
+        valid = {"diagnosis", "plan", "wellbeing", "progress", "acceleration"}
+        return focus if focus in valid else "diagnosis"
+
+    def _record_focus_transition(self, context: AgentContext, previous_focus: Optional[str], new_focus: str):
+        if previous_focus == new_focus:
+            return
+        prev = previous_focus or "none"
+        context.add_trace(f"Focus transition: {prev} -> {new_focus}")
+        state = context.state
+        if state.last_focus_broadcast == new_focus:
+            return
+        print(f"FOCUS_TRANSITION::{prev}->{new_focus}")
+        state.record_focus_broadcast(new_focus)
