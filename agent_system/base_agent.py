@@ -7,6 +7,7 @@ from .mcp_client import SimpleMCPClient
 from .tools.widget_tools import WidgetToolset
 import os
 import sys
+import re
 from dotenv import load_dotenv
 import time
 import hashlib
@@ -17,18 +18,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
-# Model Instance Cache - shared across all agents
-# Caches model instances to avoid recreating them with identical configurations
 _model_cache = {}
 _model_cache_lock = __import__('threading').Lock()
-
-OFFER_TARGET_MAP = {
-    "comprehensive_plan": ["Nutritionist", "Fitness Coach", "Sleep Doctor", "Mindfulness Coach"],
-    "nutrition_plan": ["Nutritionist"],
-    "fitness_plan": ["Fitness Coach"],
-    "sleep_plan": ["Sleep Doctor"],
-    "mindfulness_plan": ["Mindfulness Coach"],
-}
 
 class Agent:
     def __init__(
@@ -49,27 +40,30 @@ class Agent:
         self.mcp_client = mcp_client
         self.enable_widget_tools = enable_widget_tools
         self.widget_toolset = WidgetToolset() if enable_widget_tools else None
-        self.widgets = []  # Store widgets to be returned with response
+        self.widgets = []
         self._current_widget_calls = set()
-        self._summary_prompted = False
-        self.cacheable_tools = {"get_biomarker_ranges"}
-        self.allowed_mcp_tools = set(allowed_mcp_tools) if allowed_mcp_tools else None
+        # Cache ALL tool results in context by default - all MCP tools are read-only queries
+        # This avoids redundant calls when multiple agents need the same data
+        # None = all tools allowed, [] = no tools allowed, ["X"] = only X allowed
+        if allowed_mcp_tools is None:
+            self.allowed_mcp_tools = None  # All tools
+        else:
+            self.allowed_mcp_tools = set(allowed_mcp_tools)  # Specific set (can be empty)
         self.default_next_agents = default_next_agents
         self.enable_handoff = enable_handoff
         self.allow_emergency_stop = allow_emergency_stop
-        
-        # Configure the model
-        self.model_name = "gemini-2.5-flash" # SOTA model
+        self.model_name = "gemini-2.5-flash"
 
     def _should_stream_to_client(self) -> bool:
-        """Only certain agents (Guardrail, Critic) should surface text directly to the UI."""
-        return self.name in {"Guardrail", "Critic"}
+        # Guardrail is internal safety check - never stream to client
+        return self.name in {"Critic", "Conversation Planner", "Physician", "Nutritionist", "Fitness Coach", "Sleep Doctor", "Mindfulness Coach"}
 
     def _write_text_chunk(self, text: str, newline: bool = False, prefix: bool = True):
-        """Stream text either to SSE (sys.stdout) or only to server logs (sys.__stdout__)."""
-        target = sys.stdout if self._should_stream_to_client() else sys.__stdout__
+        is_client_stream = self._should_stream_to_client()
+        target = sys.stdout if is_client_stream else sys.__stdout__
         if prefix:
-            target.write("  💬 ")
+            indicator = "  📤 " if is_client_stream else "  🔒 "
+            target.write(indicator)
         target.write(text)
         if newline:
             target.write("\n")
@@ -77,19 +71,15 @@ class Agent:
         
     def _build_system_prompt(self, context: AgentContext) -> str:
         registry_prompt = AgentRegistry.get_registry_prompt()
-        
         state = context.state
         context_str = f"""
         CURRENT CONTEXT:
-        - User Intent (raw): {context.user_intent}
-        - Conversation Intent: {state.intent}
+        - User Intent: {context.user_intent}
         - Conversation Focus: {state.focus}
         - Conversation Stage: {state.stage}
-        - Pending Offer: {state.pending_offer if state.pending_offer else "None"}
-        - Offer Targets: {state.offer_targets if state.offer_targets else "None"}
         - Accumulated Findings: {context.accumulated_findings}
-        - Pending Tasks: {context.pending_tasks}
         - System Flags: {context.flags}
+        - Plan Domains Ready: {context.plan_domain_flags}
         """
         
         return f"""
@@ -103,16 +93,18 @@ class Agent:
         {context_str}
         
         INSTRUCTIONS:
-        1. Analyze the context and history.
-        2. Use your tools to gather information or perform tasks.
-        3. If you need another agent's expertise, use `transfer_handoff`.
-        4. If you have completed your part, handoff to the next logical agent or the 'Critic' if finished.
-        5. Always update the context with new findings before handing off.
+        1. Analyze the context.
+        2. Use tools to gather information.
+        3. If you need another agent, use `transfer_handoff`.
+        4. If finished, handoff to 'Critic'.
         """
 
     def _filter_mcp_tools(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        if not self.allowed_mcp_tools:
+        # None = all tools allowed, empty set = no tools, non-empty set = only those tools
+        if self.allowed_mcp_tools is None:
             return tools
+        if len(self.allowed_mcp_tools) == 0:
+            return []  # Explicitly no MCP tools for this agent
         filtered = []
         for group in tools:
             decls = [
@@ -124,7 +116,6 @@ class Agent:
         return filtered
 
     def _get_widget_tools(self):
-        """Get widget tool declarations for this agent."""
         if not self.widget_toolset:
             return {"function_declarations": []}
         return self.widget_toolset.get_tool_declarations()
@@ -134,11 +125,11 @@ class Agent:
             "function_declarations": [
                 {
                     "name": "transfer_handoff",
-                    "description": "Transfers control to one or more agents. For concurrent execution, specify multiple target agents as a comma-separated string (e.g., 'Physician,Nutritionist,Fitness Coach'). All specified agents will execute in parallel.",
+                    "description": "Transfers control to one or more agents. For concurrent execution, specify multiple target agents as a comma-separated string.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
-                            "target_agent": {"type": "STRING", "description": "Name(s) of the agent(s) to transfer to. For multiple agents, use comma-separated values: 'Agent1,Agent2,Agent3'"},
+                            "target_agent": {"type": "STRING", "description": "Name(s) of agent(s). Use comma-separated for parallel: 'Agent1,Agent2'"},
                             "reason": {"type": "STRING", "description": "Reason for the transfer."},
                             "new_finding": {"type": "STRING", "description": "Optional finding to add to context."}
                         },
@@ -153,14 +144,11 @@ class Agent:
             "function_declarations": [
                 {
                     "name": "trigger_emergency_stop",
-                    "description": "Immediately stop the conversation and instruct the user to contact emergency services.",
+                    "description": "Immediately stop the conversation for emergency/safety.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
-                            "reason": {
-                                "type": "STRING",
-                                "description": "Short description of the emergency condition or policy violation."
-                            }
+                            "reason": {"type": "STRING", "description": "Short description of the emergency."}
                         },
                         "required": ["reason"]
                     }
@@ -169,10 +157,6 @@ class Agent:
         }
 
     def _normalize_tool_args(self, obj):
-        """
-        Recursively convert protobuf/map/repeated structures into plain Python types
-        so they can be serialized or compared reliably.
-        """
         if isinstance(obj, dict):
             return {k: self._normalize_tool_args(v) for k, v in obj.items()}
         if isinstance(obj, (list, tuple, set)):
@@ -185,12 +169,6 @@ class Agent:
         return obj
 
     def _handle_widget_tool(self, tool_name: str, args: Dict[str, Any], context: AgentContext) -> bool:
-        """
-        Execute native widget tools and deduplicate repeated calls.
-        
-        Returns:
-            bool: True if the tool_name was handled as a widget tool.
-        """
         if not self.widget_toolset:
             return False
         if not (tool_name.startswith("return_") and "_widget" in tool_name):
@@ -203,8 +181,6 @@ class Agent:
         
         call_signature = self.widget_toolset.get_signature(tool_name, normalized_args)
         if call_signature in self._current_widget_calls:
-            print(f"  > Skipping duplicate widget call: {tool_name}({normalized_args})")
-            context.add_trace(f"{self.name}: skipped duplicate widget {tool_name}")
             return True
         self._current_widget_calls.add(call_signature)
         
@@ -214,15 +190,11 @@ class Agent:
         
         if widget_data:
             self.widgets.append(widget_data)
-            print(f"  ✅ Widget added: {widget_data['type']} ({duration_ms}ms)")
+            print(f"  ✅ Widget added: {widget_data['type']} ({duration_ms}ms)", flush=True)
             context.add_trace(f"{self.name}: added widget {widget_data['type']}")
-        else:
-            print(f"  ⚠️ Widget data unavailable for {tool_name}({normalized_args})")
-            context.add_trace(f"{self.name}: widget data unavailable for {tool_name}")
         return True
 
     def _extract_text_from_parts(self, response) -> str:
-        """Safely collect all text parts from a model response."""
         text_chunks = []
         for part in getattr(response, "parts", []):
             try:
@@ -230,42 +202,38 @@ class Agent:
                 if part_text:
                     text_chunks.append(part_text)
             except ValueError:
-                # Raised when the part represents a function call rather than text
                 continue
         return "".join(text_chunks).strip()
 
+    def _strip_scratchpad(self, text: str):
+        scratch_segments = []
+        def repl(match):
+            scratch_segments.append(match.group(1).strip())
+            return ""
+        visible_text = re.sub(r"\[\[scratch\]\](.*?)\[\[/scratch\]\]", repl, text, flags=re.DOTALL)
+        return visible_text.strip(), scratch_segments
+
     def _get_model_cache_key(self, system_prompt: str, tools: list) -> str:
-        """Generate cache key for model configuration."""
-        # For simplicity, use agent name as cache key since system prompts are per-agent
-        # and tools are the same for all instances of an agent
         return f"{self.name}:{self.model_name}"
     
     def _get_cached_model(self, system_prompt: str, tools: list):
-        """Get or create a cached model instance."""
         cache_key = self._get_model_cache_key(system_prompt, tools)
-        
         with _model_cache_lock:
             if cache_key in _model_cache:
-                return _model_cache[cache_key], True  # Cache hit
-            
-            # Create new model and cache it
+                return _model_cache[cache_key], True
             model = genai.GenerativeModel(
                 model_name=self.model_name,
                 system_instruction=system_prompt,
                 tools=tools
             )
             _model_cache[cache_key] = model
-            return model, False  # Cache miss
+            return model, False
     
     def run(self, context: AgentContext) -> List[str]:
-        """
-        Runs the agent. Returns a list of agent names to execute next (for parallel execution) or ['STOP'] if finished (Critic).
-        """
         agent_start = time.time()
         print(f"\n--- Agent Active: {self.name} ---")
         context.add_trace(f"{self.name}: started run (hop {context.hop_count})")
         
-        # 1. Setup Tools (MCP + Widget + Handoff)
         mcp_tools = self._filter_mcp_tools(self.mcp_client.get_tools_definitions())
         widget_tools = self._get_widget_tools()
         all_tools = list(mcp_tools)
@@ -276,31 +244,23 @@ class Agent:
         if self.allow_emergency_stop:
             all_tools.append(self._get_emergency_stop_tool())
         
-        # Clear per-run widget tracking
         self.widgets = []
         self._current_widget_calls = set()
-        self._summary_prompted = False
         
-        # 2. Setup Model with caching
         system_prompt = self._build_system_prompt(context)
         model, cache_hit = self._get_cached_model(system_prompt, all_tools)
         
         if not cache_hit:
             print(f"  🔧 Model instance created and cached")
         
-        # 3. Chat Session (Stateless for the agent, but we inject history)
-        # We need to convert our Message model to Gemini history format
         gemini_history = []
         for msg in context.history:
             role = "user" if msg.role == "user" else "model"
-            # Simple mapping. In a real system, we'd handle tool outputs in history more carefully.
             gemini_history.append({"role": role, "parts": [msg.content]})
             
         chat = model.start_chat(history=gemini_history)
         
-        # 4. Send Request with streaming
         llm_start = time.time()
-        response_stream = None
         full_text = ""
         has_text = False
         chunks = []
@@ -310,7 +270,6 @@ class Agent:
             response_stream = chat.send_message("Proceed with your task based on the context.", stream=True)
             for chunk in response_stream:
                 chunks.append(chunk)
-                # Check if this chunk has text (not a function call)
                 try:
                     if chunk.text:
                         has_text = True
@@ -318,10 +277,9 @@ class Agent:
                         self._write_text_chunk(chunk.text)
                         full_text += chunk.text
                 except ValueError:
-                    # This chunk is a function call, not text - skip streaming for it
                     pass
         except Exception as stream_error:
-            print(f"\n  ❌ Streaming error detected: {stream_error}. Retrying without streaming...")
+            print(f"\n  ❌ Streaming error: {stream_error}. Retrying...")
             try:
                 chat.rewind()
             except Exception:
@@ -343,103 +301,88 @@ class Agent:
         llm_time = time.time() - llm_start
         print(f"  ⏱️  LLM Response: {llm_time:.2f}s")
         
-        # The last chunk contains the complete response with all parts
-        final_response = chunks[-1] if chunks else None
+        if not chunks:
+            return self._get_completion_targets()
         
-        if not final_response:
-            return self._get_completion_targets()  # Fallback
+        # Collect function calls from ALL chunks (not just the last one)
+        # With streaming, function calls can appear in any chunk
+        all_function_calls = []
+        for chunk in chunks:
+            for part in getattr(chunk, 'parts', []):
+                if hasattr(part, 'function_call') and part.function_call:
+                    all_function_calls.append(part.function_call)
         
-        # 5. Handle Tool Calls Loop
-        # Gemini SDK handles the loop if we use automatic function calling, but we want to intercept 'transfer_handoff'.
-        # So we will do a manual loop or check the parts.
-        
-        # OPTIMIZATION: Collect all MCP tool calls for parallel execution
         mcp_tool_calls = []
-        for part in final_response.parts:
-            if fn := part.function_call:
-                tool_name = fn.name
-                args = self._normalize_tool_args(dict(fn.args))
+        for fn in all_function_calls:
+            tool_name = fn.name
+            args = self._normalize_tool_args(dict(fn.args))
+            
+            print(f"  > Tool Call: {tool_name}({args})", flush=True)
+            context.add_trace(f"{self.name}: tool_call {tool_name} ({args})")
+            
+            if self._handle_widget_tool(tool_name, args, context):
+                continue
+            
+            if tool_name == "transfer_handoff":
+                if self.name == "Guardrail":
+                    target_arg = args.get("target_agent", "").strip()
+                    if target_arg.upper() != "STOP":
+                        print(f"  ⚠️  Guardrail attempted to route to '{target_arg}', ignoring.")
+                        continue
+                if full_text:
+                    self._finalize_text_response(full_text, context)
+                    full_text = ""
+                target = args["target_agent"]
+                reason = args["reason"]
+                if "new_finding" in args and args["new_finding"]:
+                    finding = args["new_finding"]
+                    print(f"  🔎 New finding from {self.name}: {finding}")
+                    context.add_finding(f"[{self.name}]: {finding}")
                 
-                print(f"  > Tool Call: {tool_name}({args})")
-                context.add_trace(f"{self.name}: tool_call {tool_name} ({args})")
+                target_agents = [agent.strip() for agent in target.split(",")]
                 
-                if self._handle_widget_tool(tool_name, args, context):
-                    continue  # Already processed as a native widget tool
-                
-                if tool_name == "transfer_handoff":
-                    # Guardrail should only use STOP handoffs; ignore others so orchestrator can decide.
-                    if self.name == "Guardrail":
-                        target_arg = args.get("target_agent", "").strip()
-                        if target_arg.upper() != "STOP":
-                            print(f"  ⚠️  Guardrail attempted to route to '{target_arg}', ignoring (orchestrator handles routing).")
-                            context.add_trace(f"Guardrail transfer to '{target_arg}' ignored; state machine will route.")
-                            continue
-                    if full_text:
-                        self._finalize_text_response(full_text, context, allow_widgets=False)
-                        full_text = ""
-                    target = args["target_agent"]
-                    reason = args["reason"]
-                    if "new_finding" in args and args["new_finding"]:
-                        finding = args["new_finding"]
-                        print(f"  🔎 New finding from {self.name}: {finding}")
-                        context.add_finding(f"[{self.name}]: {finding}")
-                        if "OFFER:" in finding:
-                            offer_value = finding.split("OFFER:")[-1].strip()
-                            self._register_offer(context, offer_value)
-                    
-                    # Parse target agents (can be comma-separated for parallel execution)
-                    target_agents = [agent.strip() for agent in target.split(",")]
-                    
-                    if len(target_agents) > 1:
-                        context.add_message("model", f"Handing off to {', '.join(target_agents)} (parallel): {reason}", sender=self.name)
-                        print(f"  🔀 Parallel Handoff to: {', '.join(target_agents)}")
-                    else:
-                        context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
-                    context.add_trace(f"{self.name}: handoff -> {target_agents}")
-                    
-                    # Store widgets in context before handoff
-                    if self.widgets:
-                        context.pending_widgets.extend(self.widgets)
-                    
-                    agent_total = time.time() - agent_start
-                    print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
-                    return target_agents
-                elif tool_name == "trigger_emergency_stop" and self.allow_emergency_stop:
-                    reason = args.get("reason", "Emergency condition detected.")
-                    if full_text:
-                        self._finalize_text_response(full_text, context, allow_widgets=False)
-                        full_text = ""
-                    stop_text = (
-                        f"⚠️ Emergency detected: {reason}\n\n"
-                        "Please stop interacting with the system and contact emergency medical services immediately "
-                        "(call 911 or your local emergency number)."
-                    )
-                    self._write_text_chunk(stop_text, newline=True)
-                    print(f"  🛑 Emergency stop triggered: {reason}")
-                    context.add_trace(f"{self.name}: emergency stop -> {reason}")
-                    context.add_message("model", stop_text, sender=self.name)
-                    agent_total = time.time() - agent_start
-                    print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
-                    return ["STOP"]
+                if len(target_agents) > 1:
+                    context.add_message("model", f"Handing off to {', '.join(target_agents)} (parallel): {reason}", sender=self.name)
+                    print(f"  🔀 Parallel Handoff to: {', '.join(target_agents)}")
                 else:
-                    entry = {"name": tool_name, "args": args}
-                    if tool_name in self.cacheable_tools:
-                        cached = context.get_cached_tool_result(tool_name, args)
-                        if cached is not None:
-                            entry["cached_result"] = cached
-                    mcp_tool_calls.append(entry)
+                    context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
+                context.add_trace(f"{self.name}: handoff -> {target_agents}")
+                if self.name == "Conversation Planner":
+                    context.register_plan_request(self.name, target_agents)
+                
+                if self.widgets:
+                    context.pending_widgets.extend(self.widgets)
+                
+                agent_total = time.time() - agent_start
+                print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
+                return target_agents
+            elif tool_name == "trigger_emergency_stop" and self.allow_emergency_stop:
+                reason = args.get("reason", "Emergency condition detected.").lower()
+                if full_text:
+                    self._finalize_text_response(full_text, context)
+                    full_text = ""
+                
+                # Generate user-friendly emergency message based on type
+                stop_text = self._get_emergency_message(reason)
+                self._write_text_chunk(stop_text, newline=True)
+                print(f"  🛑 Emergency stop triggered: {reason}")
+                context.add_message("model", stop_text, sender=self.name)
+                return ["STOP"]
+            else:
+                entry = {"name": tool_name, "args": args}
+                # Check context cache for ALL tools (no hardcoded whitelist)
+                cached = context.get_cached_tool_result(tool_name, args)
+                if cached is not None:
+                    entry["cached_result"] = cached
+                mcp_tool_calls.append(entry)
         
-        # If we have text AND tool calls, log the text now (without widgets) before executing tools
         if mcp_tool_calls and full_text:
-            self._finalize_text_response(full_text, context, allow_widgets=False)
+            self._finalize_text_response(full_text, context)
             full_text = ""
 
-        # Execute all MCP tools in parallel if we have multiple
         if mcp_tool_calls:
             try:
-                # Helper function to convert protobuf types
                 def to_plain_python(obj):
-                    """Recursively convert protobuf types to plain Python."""
                     if isinstance(obj, dict):
                         return {k: to_plain_python(v) for k, v in obj.items()}
                     elif isinstance(obj, (list, tuple)):
@@ -449,7 +392,6 @@ class Agent:
                     else:
                         return obj
                 
-                batch_start = time.time()
                 tool_results_ordered = []
                 pending_entries = []
                 cached_results = {}
@@ -457,7 +399,6 @@ class Agent:
                     entry["idx"] = idx
                     if "cached_result" in entry:
                         cached_results[idx] = entry["cached_result"]
-                        context.add_trace(f"{self.name}: cache hit {entry['name']}")
                         print(f"  💾 Context cache HIT: {entry['name']}")
                     else:
                         pending_entries.append(entry)
@@ -484,17 +425,16 @@ class Agent:
                                     'error': None,
                                     'time': duration
                                 }
-                                if tool_name in self.cacheable_tools and result is not None:
+                                # Cache ALL tool results in context (no hardcoded whitelist)
+                                if result is not None:
                                     context.cache_tool_result(tool_name, entry["args"], result)
-                                context.add_trace(f"{self.name}: executed tool {tool_name} ({duration:.2f}s)")
                                 if result:
-                                    preview = result if (tool_name.startswith('return_') and 'widget' in tool_name.lower()) else result[:100]
+                                    preview = result[:100] if isinstance(result, str) else str(result)[:100]
                                     print(f"  > {tool_name}: {preview}...")
                                 else:
                                     print(f"  > {tool_name}: None")
                                 if self.name == "Physician" and tool_name == "get_biomarkers":
                                     context.set_flag("biomarkers_ready", True)
-                                    self._process_biomarker_flags(context, result)
                             except Exception as e:
                                 print(f"  > {tool_name} Error: {e}")
                                 executed_results[idx] = {
@@ -503,7 +443,6 @@ class Agent:
                                     'error': str(e),
                                     'time': 0
                                 }
-                batch_time = time.time() - batch_start if pending_entries else 0
                 
                 for entry in mcp_tool_calls:
                     idx = entry["idx"]
@@ -517,13 +456,11 @@ class Agent:
                         })
                         if self.name == "Physician" and entry["name"] == "get_biomarkers":
                             context.set_flag("biomarkers_ready", True)
-                            self._process_biomarker_flags(context, cached_results[idx])
                     else:
                         exec_info = executed_results.get(idx, {'name': entry["name"], 'result': None, 'error': 'Unknown error', 'time': 0})
                         exec_info['cached'] = False
                         tool_results_ordered.append(exec_info)
                 
-                # Prepare response parts for all tool results
                 response_parts = []
                 for tool_result in tool_results_ordered:
                     if tool_result['error']:
@@ -545,83 +482,38 @@ class Agent:
                             )
                         )
                 
-                if pending_entries:
-                    if len(pending_entries) > 1:
-                        print(f"  ⏱️  Batch Tool Execution: {batch_time:.2f}s ({len(pending_entries)} tools)")
-                    else:
-                        print(f"  ⏱️  Tool Execution: {batch_time:.2f}s")
-                
-                # Send all tool responses back to the model at once
-                tool_response = chat.send_message(
-                    genai.protos.Content(parts=response_parts)
-                )
-                
-                # Process the response to the tool outputs
+                tool_response = chat.send_message(genai.protos.Content(parts=response_parts))
                 return self._process_response(tool_response, context, chat)
                     
             except Exception as e:
                 print(f"  > Tool Execution Error: {e}")
-                import traceback
-                traceback.print_exc()
-                # Return error to allow agent to continue
-                agent_total = time.time() - agent_start
-                print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
                 return self._get_completion_targets()
                     
-        # If text response (already streamed above)
         if full_text:
-            self._finalize_text_response(full_text, context, allow_widgets=True)
+            self._finalize_text_response(full_text, context)
             agent_total = time.time() - agent_start
             print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
             return self._get_completion_targets()
-
-        if self.name == "Physician" and not self._summary_prompted:
-            self._summary_prompted = True
-            print("  ⚠️  Physician response lacked narrative; requesting summary.")
-            try:
-                summary_response = chat.send_message(
-                    "Provide a concise, user-facing summary of the key biomarker findings, "
-                    "then explicitly hand off to Nutritionist and Fitness Coach with justification."
-                )
-            except Exception as summary_error:
-                print(f"  ❌ Summary request failed: {summary_error}. Proceeding with default handoff.")
-                return ["Critic"]
-            return self._process_response(summary_response, context, chat)
-        
-        default_handoff = self._get_completion_targets()
-        if self.name == "Physician":
-            # Ensure cardiovascular cases still reach specialists even if the Physician
-            # returned only widgets. Default to Nutritionist + Fitness Coach so the user
-            # receives actionable follow-ups.
-            default_handoff = ["Nutritionist", "Fitness Coach"]
-            context.add_message(
-                "model",
-                "Routing to Nutritionist and Fitness Coach for lifestyle interventions.",
-                sender=self.name,
-            )
 
         if self.widgets:
             context.pending_widgets.extend(self.widgets)
             self.widgets = []
 
         agent_total = time.time() - agent_start
-        print(f"  ⚠️  No explicit response provided. Defaulting to {', '.join(default_handoff)}.")
         print(f"  ⏱️  Total Agent Time: {agent_total:.2f}s")
-        return default_handoff
+        return self._get_completion_targets()
 
     def _process_response(self, response, context, chat):
-        """Helper to handle the response loop recursively with parallel tool execution."""
-        # Collect all tool calls
         mcp_tool_calls = []
         
         for part in response.parts:
             if fn := part.function_call:
                 tool_name = fn.name
                 args = self._normalize_tool_args(dict(fn.args))
-                print(f"  > Tool Call: {tool_name}({args})")
+                print(f"  > Tool Call: {tool_name}({args})", flush=True)
                 
                 if self._handle_widget_tool(tool_name, args, context):
-                    continue  # Already processed as a native widget tool
+                    continue
                 
                 if tool_name == "transfer_handoff":
                     target = args["target_agent"]
@@ -630,11 +522,7 @@ class Agent:
                         finding = args["new_finding"]
                         print(f"  🔎 New finding from {self.name}: {finding}")
                         context.add_finding(f"[{self.name}]: {finding}")
-                        if "OFFER:" in finding:
-                            offer_value = finding.split("OFFER:")[-1].strip()
-                            self._register_offer(context, offer_value)
                     
-                    # Parse target agents (can be comma-separated for parallel execution)
                     target_agents = [agent.strip() for agent in target.split(",")]
                     
                     if len(target_agents) > 1:
@@ -642,35 +530,21 @@ class Agent:
                         print(f"  🔀 Parallel Handoff to: {', '.join(target_agents)}")
                     else:
                         context.add_message("model", f"Handing off to {target}: {reason}", sender=self.name)
-                    context.add_trace(f"{self.name}: handoff -> {target_agents}")
                     
-                    # Store widgets in context before handoff
                     if self.widgets:
                         context.pending_widgets.extend(self.widgets)
                     
                     return target_agents
                 else:
-                    # Collect MCP tool calls for parallel execution
                     entry = {"name": tool_name, "args": args}
-                    if tool_name in self.cacheable_tools:
-                        cached = context.get_cached_tool_result(tool_name, args)
-                        if cached is not None:
-                            entry["cached_result"] = cached
-                    
-                    # Set flags for downstream widget selection based on tool calls
-                    if tool_name == "get_workout_plan":
-                        context.set_flag("needs_workout_widget", True)
-                    elif tool_name == "get_food_journal" or tool_name == "get_meal_plan":
-                        context.set_flag("needs_meal_widget", True)
-                    elif tool_name == "get_supplement_info":
-                        context.set_flag("needs_supp_widget", True)
-                        
+                    # Check context cache for ALL tools (no hardcoded whitelist)
+                    cached = context.get_cached_tool_result(tool_name, args)
+                    if cached is not None:
+                        entry["cached_result"] = cached
                     mcp_tool_calls.append(entry)
         
-        # Execute MCP tools in parallel if we have any
         if mcp_tool_calls:
             def to_plain_python(obj):
-                """Recursively convert protobuf types to plain Python."""
                 if isinstance(obj, dict):
                     return {k: to_plain_python(v) for k, v in obj.items()}
                 elif isinstance(obj, (list, tuple)):
@@ -687,52 +561,50 @@ class Agent:
                 entry["idx"] = idx
                 if "cached_result" in entry:
                     cached_results[idx] = entry["cached_result"]
-                    context.add_trace(f"{self.name}: cache hit {entry['name']}")
                     print(f"  💾 Context cache HIT: {entry['name']}")
                 else:
                     pending_entries.append(entry)
             
-                executed_results = {}
-                if pending_entries:
-                    max_workers = min(len(pending_entries), 4)
-                    if len(pending_entries) > 1:
-                        print(f"  📊 Executing {len(pending_entries)} tools in batch...")
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        future_map = {
-                            executor.submit(self._run_tool_call, entry["name"], to_plain_python(entry["args"])): entry
-                            for entry in pending_entries
-                        }
-                        for future in as_completed(future_map):
-                            entry = future_map[future]
-                            tool_name = entry["name"]
-                            idx = entry["idx"]
-                            try:
-                                result, duration = future.result()
-                                executed_results[idx] = {
-                                    'name': tool_name,
-                                    'result': result,
-                                    'error': None,
-                                    'time': duration
-                                }
-                                if tool_name in self.cacheable_tools and result is not None:
-                                    context.cache_tool_result(tool_name, entry["args"], result)
-                                context.add_trace(f"{self.name}: executed tool {tool_name} ({duration:.2f}s)")
-                                if result:
-                                    preview = result if (tool_name.startswith('return_') and 'widget' in tool_name.lower()) else result[:100]
-                                    print(f"  > {tool_name}: {preview}...")
-                                else:
-                                    print(f"  > {tool_name}: None")
-                                if self.name == "Physician" and tool_name == "get_biomarkers":
-                                    context.set_flag("biomarkers_ready", True)
-                                    self._process_biomarker_flags(context, result)
-                            except Exception as e:
-                                print(f"  > {tool_name} Error: {e}")
-                                executed_results[idx] = {
-                                    'name': tool_name,
-                                    'result': None,
-                                    'error': str(e),
-                                    'time': 0
-                                }
+            executed_results = {}
+            if pending_entries:
+                max_workers = min(len(pending_entries), 4)
+                if len(pending_entries) > 1:
+                    print(f"  📊 Executing {len(pending_entries)} tools in batch...")
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    future_map = {
+                        executor.submit(self._run_tool_call, entry["name"], to_plain_python(entry["args"])): entry
+                        for entry in pending_entries
+                    }
+                    for future in as_completed(future_map):
+                        entry = future_map[future]
+                        tool_name = entry["name"]
+                        idx = entry["idx"]
+                        try:
+                            result, duration = future.result()
+                            executed_results[idx] = {
+                                'name': tool_name,
+                                'result': result,
+                                'error': None,
+                                'time': duration
+                            }
+                            # Cache ALL tool results in context (no hardcoded whitelist)
+                            if result is not None:
+                                context.cache_tool_result(tool_name, entry["args"], result)
+                            if result:
+                                preview = result[:100] if isinstance(result, str) else str(result)[:100]
+                                print(f"  > {tool_name}: {preview}...")
+                            else:
+                                print(f"  > {tool_name}: None")
+                            if self.name == "Physician" and tool_name == "get_biomarkers":
+                                context.set_flag("biomarkers_ready", True)
+                        except Exception as e:
+                            print(f"  > {tool_name} Error: {e}")
+                            executed_results[idx] = {
+                                'name': tool_name,
+                                'result': None,
+                                'error': str(e),
+                                'time': 0
+                            }
             
             for entry in mcp_tool_calls:
                 idx = entry["idx"]
@@ -746,13 +618,11 @@ class Agent:
                     })
                     if self.name == "Physician" and entry["name"] == "get_biomarkers":
                         context.set_flag("biomarkers_ready", True)
-                        self._process_biomarker_flags(context, cached_results[idx])
                 else:
                     exec_info = executed_results.get(idx, {'name': entry["name"], 'result': None, 'error': 'Unknown error', 'time': 0})
                     exec_info['cached'] = False
                     tool_results_ordered.append(exec_info)
             
-            # Prepare response parts for all tool results
             response_parts = []
             for tool_result in tool_results_ordered:
                 if tool_result['error']:
@@ -774,13 +644,11 @@ class Agent:
                         )
                     )
             
-            # Send all responses back
             tool_response = chat.send_message(genai.protos.Content(parts=response_parts))
             return self._process_response(tool_response, context, chat)
         
         text_content = self._extract_text_from_parts(response)
         if text_content:
-            # Stream the full response text to frontend/stdout for SSE
             self._write_text_chunk(text_content, newline=True)
             context.add_message("model", text_content, sender=self.name)
             if self.widgets:
@@ -788,31 +656,58 @@ class Agent:
                 self.widgets = []
             return self._get_completion_targets()
 
-        if self.name == "Physician" and not self._summary_prompted:
-            self._summary_prompted = True
-            print("  ⚠️  Physician response lacked narrative; requesting summary.")
-            summary_response = chat.send_message(
-                "Provide a concise, user-facing summary of the key biomarker findings, "
-                "then explicitly hand off to Nutritionist and Fitness Coach with justification."
-            )
-            return self._process_response(summary_response, context, chat)
-
-        # If we reach here, no further instructions were provided; default to next agents
-        default_handoff = self._get_completion_targets()
-        if self.name == "Physician":
-            default_handoff = ["Nutritionist", "Fitness Coach"]
-            context.add_message(
-                "model",
-                "Routing to Nutritionist and Fitness Coach for lifestyle interventions.",
-                sender=self.name,
-            )
         if self.widgets:
             context.pending_widgets.extend(self.widgets)
             self.widgets = []
-        print(f"  ⚠️  No textual response from model. Defaulting to {', '.join(default_handoff)}.")
-        context.add_trace(f"{self.name}: default -> {default_handoff}")
-        return default_handoff
+        return self._get_completion_targets()
 
+    def _get_emergency_message(self, reason: str) -> str:
+        """Generate a user-friendly emergency message based on the type of crisis."""
+        reason_lower = reason.lower()
+        
+        # Mental health crisis keywords
+        mental_health_keywords = ["suicid", "kill myself", "end my life", "self-harm", "hurt myself", "don't want to live"]
+        is_mental_health = any(kw in reason_lower for kw in mental_health_keywords)
+        
+        if is_mental_health:
+            return """### We're Here for You 💙
+
+I can see you're going through something really difficult right now. Your wellbeing matters, and there are people who want to help.
+
+**Please reach out to one of these resources:**
+
+📞 **988 Suicide & Crisis Lifeline** — Call or text **988** (available 24/7)
+💬 **Crisis Text Line** — Text **HOME** to **741741**
+🌐 **International Association for Suicide Prevention** — https://www.iasp.info/resources/Crisis_Centres/
+
+You don't have to face this alone. These trained counselors are ready to listen without judgment.
+
+If you're in immediate danger, please call **911** or go to your nearest emergency room.
+
+---
+*This health assistant cannot provide crisis counseling, but the resources above can help right now.*"""
+        else:
+            # Medical emergency
+            return """### ⚠️ This Sounds Like a Medical Emergency
+
+Based on what you've described, you may need immediate medical attention.
+
+**Please take action now:**
+
+🚨 **Call 911** if you're experiencing:
+- Chest pain or pressure
+- Difficulty breathing
+- Signs of stroke (face drooping, arm weakness, speech difficulty)
+- Severe allergic reaction
+- Loss of consciousness
+
+🏥 **Go to the nearest Emergency Room** if you can safely get there
+
+📞 **Contact your doctor immediately** for urgent but non-life-threatening symptoms
+
+---
+*This health assistant is not equipped to handle medical emergencies. Please seek professional medical care right away.*"""
+    
     def _get_completion_targets(self) -> List[str]:
         if self.default_next_agents is not None:
             return self.default_next_agents
@@ -825,123 +720,62 @@ class Agent:
         result = self.mcp_client.execute_tool(tool_name, plain_args)
         return result, time.time() - tool_start
 
-    def _safe_float(self, value: Any) -> Optional[float]:
-        try:
-            if isinstance(value, str):
-                value = value.replace('%', '').strip()
-            return float(value)
-        except (ValueError, TypeError):
-            return None
-
-    def _process_biomarker_flags(self, context: AgentContext, biomarker_data: Any):
-        try:
-            if isinstance(biomarker_data, str):
-                try:
-                    data = json.loads(biomarker_data)
-                except json.JSONDecodeError:
-                    data = ast.literal_eval(biomarker_data)
-            else:
-                data = biomarker_data
-        except Exception:
-            return
-        if not isinstance(data, list):
-            return
-        ldl = trig = apo = ratio = vitd = lipase = None
-        for marker in data:
-            name = marker.get("name", "").lower()
-            value = marker.get("value")
-            num = self._safe_float(value)
-            if "ldl" in name and "low-density" in name:
-                ldl = num
-                context.flags["ldl_value"] = num
-            elif "triglyceride" in name:
-                trig = num
-                context.flags["trig_value"] = num
-            elif "apolipoprotein b" in name:
-                apo = num
-                context.flags["apo_value"] = num
-            elif "cholesterol / hdl" in name:
-                ratio = num
-                context.flags["chol_ratio"] = num
-            elif "vitamin d" in name:
-                vitd = num
-                context.flags["vitd_value"] = num
-            elif "lipase" in name:
-                lipase = num
-                context.flags["lipase_value"] = num
-        high_cardio = any([
-            ldl is not None and ldl >= 130,
-            apo is not None and apo >= 100,
-            ratio is not None and ratio >= 5,
-            trig is not None and trig >= 150
-        ])
-        if high_cardio:
-            context.set_flag("high_cardio_risk", True)
-            context.set_flag("needs_meal_widget", True)
-            context.set_flag("needs_workout_widget", True)
-        if vitd is not None and vitd < 40:
-            context.set_flag("vitd_low", True)
-            context.set_flag("needs_supp_widget", True)
-        if lipase is not None and lipase > 60:
-            context.set_flag("lipase_high", True)
-
-    def _register_offer(self, context: AgentContext, offer_type: str):
-        if not offer_type:
-            return
-        targets = OFFER_TARGET_MAP.get(offer_type) or ["Physician"]
-        context.state.set_offer(offer_type, targets)
-        target_str = ", ".join(targets) if targets else "unspecified specialists"
-        print(f"  📌 Pending offer '{offer_type}' registered for {target_str}.")
-
-    def _update_pending_offer(self, context: AgentContext, allow_widgets: bool):
-        offer_type = context.state.pending_offer
-        if offer_type and context.state.stage == "awaiting_confirmation":
-            print(f"  📌 Pending Offer active: {offer_type} (awaiting user confirmation).")
-
-    def _finalize_text_response(self, text: str, context: AgentContext, allow_widgets: bool):
+    def _finalize_text_response(self, text: str, context: AgentContext):
         if not text:
             return
-        widgets_allowed = allow_widgets
-        if self.name == "Critic":
-            self._update_pending_offer(context, allow_widgets)
-            if widgets_allowed:
-                pending_offer = context.state.pending_offer
-                awaiting_confirmation = context.state.stage == "awaiting_confirmation"
-                plan_delivery = context.state.stage == "plan_delivery"
-                if pending_offer and awaiting_confirmation:
-                    print(f"  ⏳ Widgets deferred; pending offer '{pending_offer}' not confirmed yet.")
-                    widgets_allowed = False
-                else:
-                    self._auto_widgets_from_flags(context)
-                    if plan_delivery and pending_offer:
-                        print(f"  ✅ Offer '{pending_offer}' fulfilled; delivering plan output.")
-                        context.state.mark_plan_delivered()
+        text, scratch = self._strip_scratchpad(text)
+        text = self._enforce_plan_sections(text, context)
+        text = re.sub(r"\n\s*---\s*\n", "\n\n", text)
+        for segment in scratch:
+            context.add_trace(f"{self.name} scratch: {segment}")
         context.add_message("model", text, sender=self.name)
-        if widgets_allowed and self.widgets:
+        self._ensure_required_widgets(context)
+        if self.widgets:
             context.pending_widgets.extend(self.widgets)
             self.widgets = []
-        elif not widgets_allowed:
-            # Discard any speculative widgets captured before the final response
-            self.widgets = []
 
-    def _auto_widgets_from_flags(self, context: AgentContext):
-        if not self.widget_toolset:
+    def _enforce_plan_sections(self, text: str, context: AgentContext) -> str:
+        if self.name != "Critic":
+            return text
+        sections = {
+            "nutrition": {
+                "keywords": ["Nutrition Plan", "Diet Plan"],
+                "fallback": "### Nutrition Plan\nFocus on whole foods, ample soluble fiber (oats, beans, berries), lean proteins, and omega-3 rich fish at least 2x/week while limiting saturated fats and refined sugars to improve LDL, ApoB, and triglycerides."
+            },
+            "fitness": {
+                "keywords": ["Fitness Plan", "Exercise Plan", "Workout Plan"],
+                "fallback": "### Fitness Plan\nTarget 150 minutes/week of moderate cardio (brisk walking, cycling, swimming) plus 2 strength sessions covering all major muscle groups. Progress duration by 5 minutes each week as tolerated."
+            },
+            "sleep": {
+                "keywords": ["Sleep Plan", "Sleep Optimization"],
+                "fallback": "### Sleep Plan\nHold a consistent 10:30 PM bedtime / 6:30 AM wake schedule, keep the bedroom dark/cool (65-68°F), and shut down screens 60 minutes before bed to support hormone balance and recovery."
+            },
+            "mindfulness": {
+                "keywords": ["Mindfulness Plan", "Stress Management"],
+                "fallback": "### Stress Management Plan\nUse 4-7-8 breathing during stressful moments, a 2-minute midday body scan, and a 10-minute guided meditation nightly. Schedule one nature walk and one joyful hobby session weekly."
+            },
+        }
+        lower_text = text.lower()
+        for domain, cfg in sections.items():
+            if context.plan_domain_flags.get(domain):
+                if not any(keyword.lower() in lower_text for keyword in cfg["keywords"]):
+                    text += "\n\n" + cfg["fallback"]
+                    lower_text = text.lower()
+        return text
+
+    def _ensure_required_widgets(self, context: AgentContext):
+        if self.name != "Critic" or not self.widget_toolset:
             return
-        
-        # Debug: print active flags
-        print(f"  🔍 Widget flag check: needs_meal={context.get_flag('needs_meal_widget')}, needs_workout={context.get_flag('needs_workout_widget')}, needs_supp={context.get_flag('needs_supp_widget')}")
-        
-        desired = []
-        if context.get_flag("needs_meal_widget"):
-            desired.append(("needs_meal_widget", "return_meal_plan_widget", {"plan_type": "cholesterol"}))
-        if context.get_flag("needs_workout_widget"):
-            goal = "Cardio"
-            desired.append(("needs_workout_widget", "return_workout_widget", {"goal": goal}))
-        if context.get_flag("needs_supp_widget"):
-            desired.append(("needs_supp_widget", "return_supplement_widget", {"supplement_names": ["Vitamin D3"]}))
-        
-        print(f"  🎯 Auto-widget selection: {len(desired)} widgets to add.")
-        
-        for flag_name, tool_name, args in desired:
-            self._handle_widget_tool(tool_name, args, context)
-            context.flags.pop(flag_name, None)
+        required = {
+            "nutrition": ("return_meal_plan_widget", {"plan_type": "cholesterol"}, "Meal plan"),
+            "fitness": ("return_workout_widget", {"goal": "Cardio"}, "Workout plan"),
+            "supplements": ("return_supplement_widget", {"supplement_names": ["Vitamin D3"]}, "Supplements — Thorne"),
+        }
+        needs_supplement = context.plan_domain_flags.get("supplements") or any("vitamin d" in finding.lower() for finding in context.accumulated_findings)
+        if needs_supplement:
+            context.plan_domain_flags["supplements"] = True
+        existing_types = {w.get("type") for w in context.pending_widgets}
+        for domain, (tool_name, args, widget_type) in required.items():
+            if context.plan_domain_flags.get(domain) and widget_type not in existing_types:
+                self._handle_widget_tool(tool_name, args, context)
+                existing_types.add(widget_type)

@@ -21,10 +21,10 @@ flowchart TB
     subgraph ORCH_LAYER ["Orchestration Runtime"]
         ORCH["Orchestrator<br/>run_mesh: routing + loop guard"]
         SESSION_MGR["Session Manager<br/>UUID sessions, 60m TTL"]
-        CONTEXT["AgentContext + ConversationState<br/>history, flags, tool cache, pending widgets<br/>stage/intent/pending_offer"]
+        CONTEXT["AgentContext + ConversationState<br/>history, flags, tool cache, pending widgets<br/>stage/intent/pending_offer<br/>plan_domain_flags + required/pending domains"]
         RESP_CACHE["Response Cache<br/>text + widgets keyed by data_version"]
         TRACE["Trace Collector<br/>ordered agent/tool activity"]
-        STATE_MACHINE["State Machine Helper<br/>intent inference + confirmation routing"]
+        STATE_MACHINE["State Machine Helper<br/>intent inference + confirmation routing<br/>plan domain requests"]
     end
 
     %% ============================ AGENT MESH ============================
@@ -39,7 +39,7 @@ flowchart TB
             MIND["Mindfulness Coach"]
             USER_P["User Persona"]
         end
-        CRITIC["Critic + Widget Aggregator<br/>narrative-first synthesis<br/>only stage=plan_delivery triggers widgets"]
+        CRITIC["Critic + Widget Aggregator<br/>ensures per-domain sections + fallback copy<br/>auto-calls meal/workout/supp widgets"]
         REG["Agent Registry<br/>capability prompt"]
     end
 

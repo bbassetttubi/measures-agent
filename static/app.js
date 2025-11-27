@@ -3,7 +3,6 @@ const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const agentStatus = document.getElementById('agentStatus');
-const focusPill = document.getElementById('focusPill');
 
 let isProcessing = false;
 let currentMessageElement = null;
@@ -11,14 +10,12 @@ let currentMessageMarkdown = '';
 let currentAgentName = null;
 let hasStreamContent = false;
 let currentSessionId = localStorage.getItem('session_id') || null;
-let renderedWidgets = new Set();  // Track which widgets we've already rendered to prevent duplicates
-let lastFocus = null;
+let renderedWidgets = new Set();
 
-// Function to start a new conversation
 function startNewConversation() {
     currentSessionId = null;
     localStorage.removeItem('session_id');
-    renderedWidgets.clear();  // Clear widget tracking for new conversation
+    renderedWidgets.clear();
     chatContainer.innerHTML = `
         <div class="welcome-message">
             <div class="welcome-icon">👋</div>
@@ -37,19 +34,15 @@ function startNewConversation() {
             </div>
         </div>
     `;
-    updateFocusPill(null);
     messageInput.focus();
 }
 
-// Send example query
 function sendExample(message) {
     messageInput.value = message;
     chatForm.dispatchEvent(new Event('submit'));
 }
 
-// Add message to chat
 function addMessage(content, isUser = false) {
-    // Remove welcome message if it exists
     const welcomeMsg = chatContainer.querySelector('.welcome-message');
     if (welcomeMsg) {
         welcomeMsg.remove();
@@ -74,32 +67,25 @@ function addMessage(content, isUser = false) {
     return messageContent;
 }
 
-// Add widget to last message
 function addWidget(widgetType, widgetData) {
-    // Create unique widget ID to prevent duplicates
     const widgetId = `${widgetType}:${JSON.stringify(widgetData)}`;
     
-    // Check if we've already rendered this exact widget
     if (renderedWidgets.has(widgetId)) {
         console.log('Skipping duplicate widget:', widgetType);
         return;
     }
     
-    // Mark as rendered
     renderedWidgets.add(widgetId);
     
-    // Find the last assistant message or create one if needed
     let lastMessage = chatContainer.querySelector('.message.assistant:last-child .message-content');
     
     if (!lastMessage) {
         lastMessage = addMessage('');
     }
     
-    // Create widget container
     const widgetDiv = document.createElement('div');
     widgetDiv.className = 'chat-widget';
     
-    // Render widget based on type
     if (widgetType === 'Workout plan') {
         widgetDiv.innerHTML = renderWorkoutWidget(widgetData);
     } else if (widgetType === 'Meal plan: watch & order') {
@@ -107,7 +93,6 @@ function addWidget(widgetType, widgetData) {
     } else if (widgetType === 'Supplements — Thorne') {
         widgetDiv.innerHTML = renderSupplementWidget(widgetData);
     } else {
-        // Generic widget rendering
         widgetDiv.innerHTML = `<pre>${JSON.stringify(widgetData, null, 2)}</pre>`;
     }
     
@@ -115,7 +100,6 @@ function addWidget(widgetType, widgetData) {
     scrollToBottom();
 }
 
-// Render workout plan widget
 function renderWorkoutWidget(data) {
     const videos = data.videos.map(video => `
         <div class="widget-list-item">
@@ -148,7 +132,6 @@ function renderWorkoutWidget(data) {
     `;
 }
 
-// Render meal plan widget
 function renderMealPlanWidget(data) {
     const meals = data.meals.map(meal => `
         <div class="widget-list-item">
@@ -181,7 +164,6 @@ function renderMealPlanWidget(data) {
     `;
 }
 
-// Render supplement widget
 function renderSupplementWidget(data) {
     const items = data.items.map(item => `
         <div class="widget-list-item">
@@ -213,7 +195,6 @@ function renderSupplementWidget(data) {
     `;
 }
 
-// Render markdown safely (fallback to basic formatting if marked isn't available)
 function renderMarkdown(text = '') {
     if (window.marked) {
         if (!renderMarkdown.initialized && marked.setOptions) {
@@ -223,7 +204,6 @@ function renderMarkdown(text = '') {
         return marked.parse(text);
     }
 
-    // Fallback: lightweight formatting
     let formatted = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/^\* /gm, '• ')
@@ -232,56 +212,21 @@ function renderMarkdown(text = '') {
 }
 renderMarkdown.initialized = false;
 
-const agentStatusMessages = {
-    "Guardrail": "I'm reviewing your question...",
-    "Triage Agent": "I'm coordinating the right specialists...",
-    "Physician": "I'm reviewing your biomarkers...",
-    "Nutritionist": "I'm analyzing your nutrition data...",
-    "Fitness Coach": "I'm crafting your exercise recommendations...",
-    "Sleep Doctor": "I'm evaluating your sleep patterns...",
-    "Mindfulness Coach": "I'm preparing mindfulness guidance...",
-    "User Persona": "I'm checking your preferences...",
-    "Critic": "I'm assembling your complete plan...",
-    "default": "I'm analyzing your health data..."
-};
-
-const focusLabels = {
-    "diagnosis": "Diagnosis",
-    "plan": "Action Plan",
-    "wellbeing": "Wellbeing",
-    "progress": "Progress Outlook",
-    "acceleration": "Acceleration"
-};
-
-function getAgentStatusMessage(agentName) {
-    if (!agentName || !agentStatusMessages[agentName]) {
-        return agentStatusMessages["default"];
-    }
-    return agentStatusMessages[agentName];
+function getStatusMessage(agentName) {
+    // User-friendly status messages that don't expose system architecture
+    const messages = {
+        "Guardrail": "Reviewing your request...",
+        "Conversation Planner": "Understanding your question...",
+        "Physician": "Analyzing your health data...",
+        "Nutritionist": "Preparing nutrition recommendations...",
+        "Fitness Coach": "Creating exercise recommendations...",
+        "Sleep Doctor": "Reviewing sleep patterns...",
+        "Mindfulness Coach": "Preparing wellness guidance...",
+        "Critic": "Putting together your response...",
+    };
+    return messages[agentName] || "Thinking...";
 }
 
-function updateFocusPill(focus) {
-    if (!focusPill) return;
-    if (!focus) {
-        focusPill.classList.add('hidden');
-        focusPill.dataset.focus = '';
-        lastFocus = null;
-        return;
-    }
-    if (focus === lastFocus) {
-        return;
-    }
-    lastFocus = focus;
-    const label = focusLabels[focus] || focus;
-    const valueEl = focusPill.querySelector('.pill-value');
-    if (valueEl) {
-        valueEl.textContent = label;
-    }
-    focusPill.dataset.focus = focus;
-    focusPill.classList.remove('hidden');
-}
-
-// Add typing indicator with optional agent name
 function addTypingIndicator(agentName = null) {
     const typingDiv = document.createElement('div');
     typingDiv.className = 'message assistant';
@@ -294,8 +239,9 @@ function addTypingIndicator(agentName = null) {
     const typingContent = document.createElement('div');
     typingContent.className = 'message-content';
     
-    const agentLabelText = agentName ? getAgentStatusMessage(agentName) : agentStatusMessages["default"];
-    const agentLabel = `<div class="agent-label">${agentLabelText}</div>`;
+    // Show user-friendly status message
+    const statusText = agentName ? getStatusMessage(agentName) : 'Thinking...';
+    const agentLabel = `<div class="agent-label">${statusText}</div>`;
     
     typingContent.innerHTML = `
         ${agentLabel}
@@ -312,13 +258,13 @@ function addTypingIndicator(agentName = null) {
     scrollToBottom();
 }
 
-// Update typing indicator with agent name
 function updateTypingIndicator(agentName) {
     const indicator = document.getElementById('typingIndicator');
     if (indicator) {
         const content = indicator.querySelector('.message-content');
         if (content) {
-            const agentLabel = `<div class="agent-label">${getAgentStatusMessage(agentName)}</div>`;
+            const statusText = agentName ? getStatusMessage(agentName) : 'Thinking...';
+            const agentLabel = `<div class="agent-label">${statusText}</div>`;
             const typingDots = `
                 <div class="typing-indicator">
                     <div class="typing-dot"></div>
@@ -331,7 +277,6 @@ function updateTypingIndicator(agentName) {
     }
 }
 
-// Remove typing indicator
 function removeTypingIndicator() {
     const indicator = document.getElementById('typingIndicator');
     if (indicator) {
@@ -339,13 +284,12 @@ function removeTypingIndicator() {
     }
 }
 
-// Update agent status
 function updateAgentStatus(agentName) {
     const statusText = agentStatus.querySelector('.status-text');
     const statusDot = agentStatus.querySelector('.status-dot');
 
     if (agentName) {
-        statusText.textContent = getAgentStatusMessage(agentName);
+        statusText.textContent = getStatusMessage(agentName);
         statusDot.style.background = 'var(--accent-primary)';
     } else {
         statusText.textContent = 'Ready';
@@ -353,12 +297,10 @@ function updateAgentStatus(agentName) {
     }
 }
 
-// Scroll to bottom
 function scrollToBottom() {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Handle form submission
 chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -369,27 +311,20 @@ chatForm.addEventListener('submit', async (e) => {
     const userMessage = messageInput.value.trim();
     messageInput.value = '';
 
-    // Reset streaming state for new response turn
     currentMessageElement = null;
     currentMessageMarkdown = '';
     currentAgentName = null;
     hasStreamContent = false;
 
-    // Add user message
     addMessage(userMessage, true);
-    
-    // Clear rendered widgets for new query
     renderedWidgets.clear();
 
-    // Disable input
     isProcessing = true;
     sendButton.disabled = true;
     messageInput.disabled = true;
 
-    // Add typing indicator
     addTypingIndicator();
 
-    // Use fetch with streaming for SSE
     try {
         const requestBody = { message: userMessage };
         if (currentSessionId) {
@@ -416,9 +351,8 @@ chatForm.addEventListener('submit', async (e) => {
 
             buffer += decoder.decode(value, { stream: true });
 
-            // Process complete SSE messages
             const lines = buffer.split('\n\n');
-            buffer = lines.pop(); // Keep incomplete message in buffer
+            buffer = lines.pop();
 
             for (const line of lines) {
                 if (line.startsWith('data: ')) {
@@ -428,7 +362,6 @@ chatForm.addEventListener('submit', async (e) => {
                         updateAgentStatus(data.name);
                         removeTypingIndicator();
                         addTypingIndicator(data.name);
-                        // Start a fresh bubble for the next agent's text
                         if (currentAgentName !== data.name) {
                             currentMessageElement = null;
                             currentMessageMarkdown = '';
@@ -436,7 +369,6 @@ chatForm.addEventListener('submit', async (e) => {
                             hasStreamContent = false;
                         }
                     } else if (data.type === 'widget') {
-                        // Render widget
                         removeTypingIndicator();
                         addWidget(data.widget, data.data);
                     } else if (data.type === 'stream') {
@@ -465,21 +397,17 @@ chatForm.addEventListener('submit', async (e) => {
                         currentMessageElement = null;
                         currentMessageMarkdown = '';
                         hasStreamContent = false;
-                        // Store session ID if provided
                         if (data.session_id) {
                             currentSessionId = data.session_id;
                             localStorage.setItem('session_id', data.session_id);
                         }
                     } else if (data.type === 'session') {
-                        // Handle session ID update
                         if (data.session_id) {
                             currentSessionId = data.session_id;
                             localStorage.setItem('session_id', data.session_id);
                         }
                     } else if (data.type === 'trace') {
                         console.debug('Agent trace:', data.entries);
-                    } else if (data.type === 'status') {
-                        updateFocusPill(data.focus);
                     } else if (data.type === 'done') {
                         updateAgentStatus(null);
                         currentAgentName = null;
@@ -512,5 +440,4 @@ chatForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Focus input on load
 messageInput.focus();

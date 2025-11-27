@@ -111,8 +111,15 @@ def chat():
                         current_agent = agent_name
                         yield f"data: {json.dumps({'type': 'agent', 'name': agent_name})}\n\n"
                     
+                    elif '📤' in content and current_agent:
+                        # Streaming text to client (marked with 📤)
+                        text = content.replace('📤', '').strip()
+                        if text and text != '(function call)':
+                            message_buffer += text
+                            yield f"data: {json.dumps({'type': 'stream', 'content': text})}\n\n"
+                    
                     elif '💬' in content and current_agent:
-                        # Streaming text
+                        # Legacy fallback
                         text = content.replace('💬', '').strip()
                         if text and text != '(function call)':
                             message_buffer += text

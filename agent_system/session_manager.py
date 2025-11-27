@@ -51,14 +51,18 @@ class SessionManager:
                 del self.session_timestamps[session_id]
     
     def _cleanup_old_sessions(self):
-        """Remove sessions that have timed out."""
+        """Remove sessions that have timed out. Called from within lock - do NOT call delete_session."""
         now = datetime.now()
         expired_sessions = [
             session_id for session_id, timestamp in self.session_timestamps.items()
             if now - timestamp > self.session_timeout
         ]
+        # Delete directly (we're already inside the lock - calling delete_session would deadlock)
         for session_id in expired_sessions:
-            self.delete_session(session_id)
+            if session_id in self.sessions:
+                del self.sessions[session_id]
+            if session_id in self.session_timestamps:
+                del self.session_timestamps[session_id]
     
     def list_sessions(self) -> Dict[str, dict]:
         """List all active sessions with metadata."""
